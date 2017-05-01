@@ -9909,12 +9909,18 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 class FontChanger {
 
   constructor(elements, { available_fonts, styleList, settings }) {
-    this.elements = elements; // JQuery object of the fonts that we're changing
     this.fontList = available_fonts;
     this.styleList = styleList;
     this.settings = settings;
+
+    this.changeElements(elements);
+  }
+
+  changeElements(elements) {
     this.fontIdx = 0;
-    this.stateStack = []; // So undo's are possible
+    this.stateStack = [];
+    this.elements = elements;
+    this.addStateToStack();
   }
   /**
    * Changes the font of the elements
@@ -10020,6 +10026,7 @@ class FontChanger {
   getState() {
     return {
       'fontFamily': this.elements.css('font-family'),
+      'fontIdx': this.fontIdx,
       'fontSize': this.elements.css('font-size'),
       'fontWeight': this.elements.css('font-weight'),
       'fontStyle': this.elements.css('font-style')
