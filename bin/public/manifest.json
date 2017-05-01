@@ -1,0 +1,32 @@
+{
+  "manifest_version": 2,
+  "name": "Fontset",
+  "short_name": "Fontset",
+  "description": "Easily try out fonts on your web projects",
+  "version": "0.0.1",
+  "content_scripts": [
+    {
+      "matches": [
+        "*"
+      ],
+      "js": [
+        "content.bundle.js"
+      ],
+      "run_at": "document_end",
+      "all_frames": true
+    }
+  ],
+  "background": {
+    "scripts": [
+      "background.bundle.js"
+    ]
+  },
+  "web_accessible_resources": [],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "https://ajax.googleapis.com/"
+  ],
+  "icons": {
+  }
+}
