@@ -1,12 +1,39 @@
 import FontChanger from './lib/FontChanger';
 import {keyBindings} from './lib/defaults';
 
-const keySettings = keyBindings;
+console.log(FontChanger);
 
-function handleKeyPress({altKey, ctrlKey, metaKey, key}){
-  let action = keySettings[key];
+chrome.runtime.onMessage.addListener(
+  function (request, sender, sendResponse) {
+    console.log(request);
+    sendResponse("success");
+  });
 
-  console.log(action);
+initiate(keyBindings); // for debugging;
+
+function initiate(keyBindings) {
+  let fontChanger = new FontChanger($('.name'), {
+    available_fonts: ['helvetica', 'Bree', 'lucida'],
+    styleList: ['normal', 'italic', 'oblique'],
+    settings: {
+      sizeStep: 3,
+      sizeBigMult: 10,
+      weightStep: 3,
+      weightBigMult: 10,
+      fontStep: 1,
+      fontBigMult: 1
+    }
+  });
+
+  $(window).keypress(handleKeyPress.bind({
+    fontChanger,
+    keyBindings
+  }));
 }
 
-$(window).keypress(handleKeyPress);
+function handleKeyPress({ altKey, ctrlKey, metaKey, key }) {
+  let action = this.keyBindings[key];
+
+  this.fontChanger.action(action);
+
+}

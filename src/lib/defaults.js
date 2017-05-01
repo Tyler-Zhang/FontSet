@@ -14,7 +14,12 @@ export let keyBindings = {
   a: actions.prevFont,
   A: actions.prevFontBig,
   q: actions.changeFontStyle,
-  e: actions.changeFontWeight,
   t: actions.search,
   u: actions.undo
 }
+
+export let activated = true;
+
+export let available_fonts = ['helvetica'];
+export let styleList = ['normal', 'italic', 'oblique'];
+

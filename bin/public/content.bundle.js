@@ -9902,26 +9902,43 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 "use strict";
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__FontDetector__ = __webpack_require__(4);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__actions__ = __webpack_require__(6);
 
 
-const available_fonts = ['helvetica'];
 
 class FontChanger {
 
-  constructor(elements) {
+  constructor(elements, { available_fonts, styleList, settings }) {
     this.elements = elements; // JQuery object of the fonts that we're changing
     this.fontList = available_fonts;
+    this.styleList = styleList;
+    this.settings = settings;
     this.fontIdx = 0;
+    this.stateStack = []; // So undo's are possible
   }
   /**
    * Changes the font of the elements
    * Currently, it wraps through the elements, maybe we should stop at the end instead? @todo 
-   * @param {Integer} x How mnay fonts you want to shift by  
+   * @param {Integer|String} x How mnay fonts you want to shift by
+   * @param {Bool} abs if true, x will be what the value should be changed to  
    */
-  changeFont(x) {
-    let newFontIdx = (x + this.fontIdx) % this.fontList.length;
+  changeFontFamily(x, abs = false) {
+    let newFont, newFontIdx;
+    if (abs) {
+      newFont = x;
+      newFontIdx = this.fontList.indexOf(x);
+      if (newFontIdx == -1) {
+        console.error("Font in stack not found in font list: " + newFont);
+      }
+    } else {
+      console.log(`x: ${x}, fontIdx: ${this.fontIdx}, len: ${this.fontList.length}`);
+      newFontIdx = (x + this.fontIdx) % this.fontList.length;
+      if (newFontIdx < 0) newFontIdx = this.fontList.length + newFontIdx;
+      newFont = this.fontList[newFontIdx];
+    }
+
+    this.elements.css('font-family', newFont);
     this.fontIdx = newFontIdx;
-    this.elements.css('font-family', this.fontList[newFontIdx]);
 
     return true;
   }
@@ -9929,30 +9946,133 @@ class FontChanger {
   /**
    * Changes the font size of the elements
    * @param {Number} x Font size change in px
+   * @param {Bool} abs if true, x is the absolute value
    */
-  changeSize(x) {
-    let currentFontsize = this.elements.css('font-size');
-    let reg = /\d+.?(?:\d+)?/; // regex for extracting the px size value;
+  changeSize(x, abs = false) {
+    let newFontSize;
 
-    let matched = reg.exec(currentFontsize);
+    if (abs) {
+      newFontSize = x;
+    } else {
+      let currentFontsize = this.elements.css('font-size');
+      let reg = /\d+.?(?:\d+)?/; // regex for extracting the px size value;
+      let matched = reg.exec(currentFontsize);
 
-    if (!null) {
-      console.error('No size associated with fontsize: ' + currentFontsize);
-      return false;
+      if (!matched) {
+        console.error('No size associated with fontsize: ' + currentFontsize);
+        return false;
+      }
+      newFontSize = Number(matched) + x + 'px';
+    }
+    this.elements.css('font-size', newFontSize);
+    return true;
+  }
+  /**
+   * 
+   * @param {Number} x the delta or the absolute value of the new font weight
+   * @param {Bool} abs if true the new weight will be x
+   */
+  changeWeight(x, abs) {
+    let newFontWeight;
+
+    if (abs) {
+      newFontWeight = x;
+    } else {
+      let currentFontWeight = this.elements.css('font-weight');
+      let val = Number(currentFontWeight);
+      newFontWeight = val + x;
     }
 
-    this.elements.css('font-size', Number(matched[0]) + x + 'px');
+    this.elements.css('font-weight', newFontWeight);
     return true;
   }
 
-  /**
-   * Returns the current font family
-   */
-  currentFont() {
-    return this.fontList[this.fontIdx];
+  changeStyle(x, abs) {
+    let newStyle;
+
+    if (abs) {
+      if (!x in this.styleList) {
+        console.error("Trying to change style to something not in style list: " + x);
+        return false;
+      }
+      newStyle = x;
+    } else {
+      let currStyle = this.elements.css('font-style');
+      let currIdx = this.styleList.indexOf(currStyle);
+
+      if (currIdx == -1) {
+        console.error("Trying to change style to something not in style list: " + currStyle);
+        return false;
+      }
+      newStyle = this.styleList[(currIdx + x) % this.styleList.length];
+    }
+    this.elements.css('font-style', newStyle);
+    return true;
   }
+
+  changeSettings(settings) {
+    this.settings = settings;
+  }
+
+  /**
+   * Get's the state of the elements
+   */
+  getState() {
+    return {
+      'fontFamily': this.elements.css('font-family'),
+      'fontSize': this.elements.css('font-size'),
+      'fontWeight': this.elements.css('font-weight'),
+      'fontStyle': this.elements.css('font-style')
+    };
+  }
+
+  addStateToStack() {
+    let currState = this.getState();
+    this.stateStack.push(currState);
+  }
+
+  action(ac, x) {
+    console.log("action: " + ac);
+    let set = this.settings;
+
+    switch (ac) {
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["a" /* incSize */]:
+        this.changeSize(set.sizeStep);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["b" /* incSizeBig */]:
+        this.changeSize(set.sizeStep * set.sizeBigMult);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["c" /* decSize */]:
+        this.changeSize(-set.sizeStep);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["d" /* decSizeBig */]:
+        this.changeSize(-set.sizeStep * set.sizeBigMult);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["e" /* incFontWeight */]:
+        this.changeWeight(set.weightStep);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["f" /* incFontWeightBig */]:
+        this.changeWeight(set.weightStep * set.weightBigMult);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["g" /* decFontWeight */]:
+        this.changeWeight(-set.weightStep);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["h" /* decFontWeightBig */]:
+        this.changeWeight(-set.weightStep * set.weightBigMult);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["i" /* nextFont */]:
+        this.changeFontFamily(set.fontStep);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["j" /* nextFontBig */]:
+        this.changeFontFamily(set.fontStep * set.fontBigMult);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["k" /* prevFont */]:
+        this.changeFontFamily(-set.fontStep);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["l" /* prevFontBig */]:
+        this.changeFontFamily(-set.fontStep * set.fontBigMult);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["p" /* changeFont */]:
+        this.changeFontFamily(x, true);break;
+      case __WEBPACK_IMPORTED_MODULE_1__actions__["m" /* changeFontStyle */]:
+        this.changeStyle(1);break;
+      default:
+        console.error(`Action ${ac} not recognized`);
+    }
+
+    this.addStateToStack();
+  }
+
 }
-/* unused harmony export default */
+/* harmony export (immutable) */ __webpack_exports__["a"] = FontChanger;
 
 
 /***/ }),
@@ -9963,19 +10083,44 @@ class FontChanger {
 "use strict";
 /* WEBPACK VAR INJECTION */(function($) {Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__lib_FontChanger__ = __webpack_require__(1);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__lib_defaults__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__lib_defaults__ = __webpack_require__(7);
 
 
 
-const keySettings = __WEBPACK_IMPORTED_MODULE_1__lib_defaults__["a" /* keyBindings */];
+console.log(__WEBPACK_IMPORTED_MODULE_0__lib_FontChanger__["a" /* default */]);
 
-function handleKeyPress({ altKey, ctrlKey, metaKey, key }) {
-  let action = keySettings[key];
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+  console.log(request);
+  sendResponse("success");
+});
 
-  console.log(action);
+initiate(__WEBPACK_IMPORTED_MODULE_1__lib_defaults__["a" /* keyBindings */]); // for debugging;
+
+function initiate(keyBindings) {
+  let fontChanger = new __WEBPACK_IMPORTED_MODULE_0__lib_FontChanger__["a" /* default */]($('.name'), {
+    available_fonts: ['helvetica', 'Bree', 'lucida'],
+    styleList: ['normal', 'italic', 'oblique'],
+    settings: {
+      sizeStep: 3,
+      sizeBigMult: 10,
+      weightStep: 3,
+      weightBigMult: 10,
+      fontStep: 1,
+      fontBigMult: 1
+    }
+  });
+
+  $(window).keypress(handleKeyPress.bind({
+    fontChanger,
+    keyBindings
+  }));
 }
 
-$(window).keypress(handleKeyPress);
+function handleKeyPress({ altKey, ctrlKey, metaKey, key }) {
+  let action = this.keyBindings[key];
+
+  this.fontChanger.action(action);
+}
 /* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(0)))
 
 /***/ }),
@@ -10059,8 +10204,49 @@ let Detector = function () {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__actions__ = __webpack_require__(7);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return incSize; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return incSizeBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return decSize; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return decSizeBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return incFontWeight; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return incFontWeightBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return decFontWeight; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return decFontWeightBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return nextFont; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "j", function() { return nextFontBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "k", function() { return prevFont; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "l", function() { return prevFontBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "p", function() { return changeFont; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "m", function() { return changeFontStyle; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "n", function() { return search; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "o", function() { return undo; });
+let incSize = 'incSize';
+let incSizeBig = 'incSizeBig';
+let decSize = 'decSize';
+let decSizeBig = 'decSizeBig';
+let incFontWeight = 'incFontWeight';
+let incFontWeightBig = 'incFontWeightBig';
+let decFontWeight = 'decFontWeight';
+let decFontWeightBig = 'decFontWeightBig';
+let nextFont = 'nextFont';
+let nextFontBig = 'nextFontBig';
+let prevFont = 'prevFont';
+let prevFontBig = 'prevFontBig';
+let changeFont = 'changefont';
+let changeFontStyle = 'changeFontStyle';
+let search = 'search';
+let undo = 'undo';
+
+/***/ }),
+/* 7 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__actions__ = __webpack_require__(6);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return keyBindings; });
+/* unused harmony export activated */
+/* unused harmony export available_fonts */
+/* unused harmony export styleList */
 
 
 let keyBindings = {
@@ -10077,48 +10263,14 @@ let keyBindings = {
   a: __WEBPACK_IMPORTED_MODULE_0__actions__["k" /* prevFont */],
   A: __WEBPACK_IMPORTED_MODULE_0__actions__["l" /* prevFontBig */],
   q: __WEBPACK_IMPORTED_MODULE_0__actions__["m" /* changeFontStyle */],
-  e: __WEBPACK_IMPORTED_MODULE_0__actions__["n" /* changeFontWeight */],
-  t: __WEBPACK_IMPORTED_MODULE_0__actions__["o" /* search */],
-  u: __WEBPACK_IMPORTED_MODULE_0__actions__["p" /* undo */]
+  t: __WEBPACK_IMPORTED_MODULE_0__actions__["n" /* search */],
+  u: __WEBPACK_IMPORTED_MODULE_0__actions__["o" /* undo */]
 };
 
-/***/ }),
-/* 7 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
+let activated = true;
 
-"use strict";
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return incSize; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return incSizeBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return decSize; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return decSizeBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return incFontWeight; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return incFontWeightBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return decFontWeight; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return decFontWeightBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return nextFont; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "j", function() { return nextFontBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "k", function() { return prevFont; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "l", function() { return prevFontBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "m", function() { return changeFontStyle; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "n", function() { return changeFontWeight; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "o", function() { return search; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "p", function() { return undo; });
-let incSize = 'incSize';
-let incSizeBig = 'incSizeBig';
-let decSize = 'decSize';
-let decSizeBig = 'decSizeBig';
-let incFontWeight = 'incFontWeight';
-let incFontWeightBig = 'incFontWeightBig';
-let decFontWeight = 'decFontWeight';
-let decFontWeightBig = 'decFontWeightBig';
-let nextFont = 'nextFont';
-let nextFontBig = 'nextFontBig';
-let prevFont = 'prevFont';
-let prevFontBig = 'prevFontBig';
-let changeFontStyle = 'changeFontStyle';
-let changeFontWeight = 'changeFontWeight';
-let search = 'search';
-let undo = 'undo';
+let available_fonts = ['helvetica'];
+let styleList = ['normal', 'italic', 'oblique'];
 
 /***/ })
 /******/ ]);
