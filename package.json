@@ -21,6 +21,8 @@
     "babel-loader": "^7.0.0",
     "bootstrap": "^3.3.7",
     "jquery": "^3.2.1",
+    "react": "^15.5.4",
+    "react-dom": "^15.5.4",
     "tape": "^4.6.3",
     "webpack": "^2.4.1"
   }
