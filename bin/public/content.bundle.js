@@ -176,9 +176,13 @@ module.exports = Array.isArray || function (arr) {
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return KEY_BINDINGS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return AVAILABLE_FONTS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return SETTINGS; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return INITIALIZED; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return INITIALIZED; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return INITIALIZE_CLIENT; });
 /* unused harmony export CHANGE_CLIENT_SETTINGS */
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return TOP_LEFT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return TOP_RIGHT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return BOTTOM_LEFT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return BOTTOM_RIGHT; });
 var KEY_BINDINGS = 'KEY_BINDINGS';
 var AVAILABLE_FONTS = 'AVAILABLE_FONTS';
 var SETTINGS = 'SETTINGS';
@@ -186,6 +190,11 @@ var INITIALIZED = 'INITIALIZED';
 
 var INITIALIZE_CLIENT = "INITIALIZE_CLIENT";
 var CHANGE_CLIENT_SETTINGS = "CHANGE_CLIENT_SETTINGS";
+
+var TOP_LEFT = 'tl';
+var TOP_RIGHT = 'tr';
+var BOTTOM_LEFT = 'bl';
+var BOTTOM_RIGHT = 'br';
 
 /***/ }),
 
@@ -348,8 +357,10 @@ module.exports = function (module) {
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__lib_definitions__ = __webpack_require__(14);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__lib_defaults__ = __webpack_require__(27);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__lib_actions__ = __webpack_require__(21);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__scss_content_scss__ = __webpack_require__(87);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__scss_content_scss___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_4__scss_content_scss__);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__lib_FontDisplay__ = __webpack_require__(202);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__scss_content_scss__ = __webpack_require__(87);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__scss_content_scss___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5__scss_content_scss__);
+
 
 
 
@@ -377,8 +388,11 @@ function initiate(_ref) {
     settings: settings
   });
 
+  var fontDisplay = new __WEBPACK_IMPORTED_MODULE_4__lib_FontDisplay__["a" /* default */]({ corner: "tr" });
+
   var handleContext = {
     fontChanger: fontChanger,
+    fontDisplay: fontDisplay,
     keyBindings: keyBindings,
     highlightedElement: null
   };
@@ -394,11 +408,15 @@ function handleKeyPress(_ref2) {
       key = _ref2.key;
 
   var action = this.keyBindings[key];
-  console.log(action);
   if (action == __WEBPACK_IMPORTED_MODULE_3__lib_actions__["a" /* selectHighlight */]) {
-
     this.fontChanger.changeElements($(this.highlightedElement));
-  } else this.fontChanger.action(action);
+    var state = this.fontChanger.getState();
+    this.fontDisplay.setData(state);
+  } else {
+    this.fontChanger.action(action);
+    var _state = this.fontChanger.getState();
+    this.fontDisplay.setData(_state);
+  }
 }
 
 function handleMouseMove(_ref3) {
@@ -413,6 +431,8 @@ function handleMouseMove(_ref3) {
   $(srcElement).addClass('fontset-highlighted');
   this.highlightedElement = srcElement;
 }
+
+function handleSettingsChange() {}
 /* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(83)))
 
 /***/ }),
@@ -501,7 +521,7 @@ exports = module.exports = __webpack_require__(90)(undefined);
 
 
 // module
-exports.push([module.i, ".fontset-highlighted {\n  outline: 1px solid blue; }\n\n.fontset-selected {\n  outline: 1px solid green; }\n", ""]);
+exports.push([module.i, ".fontset-highlighted {\n  outline: 1px solid blue; }\n\n.fontset-selected {\n  outline: 1px solid green; }\n\n#fontset-display {\n  position: fixed;\n  background: rgba(211, 211, 211, 0.8);\n  font-size: 12px;\n  font-family: Arial, Helvetica, sans-serif;\n  display: flex;\n  justify-content: center;\n  align-content: center;\n  align-items: center;\n  padding: 0.3em; }\n  #fontset-display * {\n    font-weight: bold;\n    margin: 0 0.5em 0 0; }\n    #fontset-display * * {\n      font-weight: normal; }\n", ""]);
 
 // exports
 
@@ -822,6 +842,86 @@ function updateLink(linkElement, options, obj) {
 
 /***/ }),
 
+/***/ 202:
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function($) {/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__definitions__ = __webpack_require__(14);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return FontDisplay; });
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+
+
+var FontDisplay = function () {
+  function FontDisplay(_ref) {
+    var corner = _ref.corner;
+
+    _classCallCheck(this, FontDisplay);
+
+    this.data = {
+      fontFamily: "",
+      fontIdx: "",
+      fontSize: "",
+      fontWeight: "",
+      fontStyle: ""
+    };
+
+    this.createDisplay(corner);
+  }
+
+  _createClass(FontDisplay, [{
+    key: "createDisplay",
+    value: function createDisplay(corner) {
+      var css = void 0;
+
+      switch (corner) {
+        case __WEBPACK_IMPORTED_MODULE_0__definitions__["e" /* TOP_LEFT */]:
+          css = { left: "0px", top: "0px" };break;
+        case __WEBPACK_IMPORTED_MODULE_0__definitions__["f" /* TOP_RIGHT */]:
+          css = { top: "0px", right: "0px" };break;
+        case __WEBPACK_IMPORTED_MODULE_0__definitions__["g" /* BOTTOM_LEFT */]:
+          css = { bottom: "0px", left: "0px" };break;
+        case __WEBPACK_IMPORTED_MODULE_0__definitions__["h" /* BOTTOM_RIGHT */]:
+          css = { bottom: "0px", right: "0px" };break;
+        default:
+          console.error(corner + " is not a valid corner");return false;
+      }
+
+      var display = $("<div id='fontset-display'>\n        <p>fontname: <span id='fontset-fontname'/> </p>\n        <p>fontsize: <span id='fontset-fontsize'/> </p>\n        <p>fontweight: <span id='fontset-fontweight'/> </p>\n        <p>fontstyle: <span id='fontset-fontstyle'/></p>\n      </div>").css(css);
+      $("body").append(display);
+      this.display = display;
+      this.refresh();
+    }
+  }, {
+    key: "refresh",
+    value: function refresh() {
+      if (!this.display) {
+        console.error('Trying to refresh the display before it was created');
+        return false;
+      }
+      $('#fontset-fontname').html(this.data.fontFamily);
+      $('#fontset-fontsize').html(this.data.fontSize);
+      $('#fontset-fontweight').html(this.data.fontWeight);
+      $('#fontset-fontstyle').html(this.data.fontStyle);
+    }
+  }, {
+    key: "setData",
+    value: function setData(data) {
+      this.data = data;
+      this.refresh();
+    }
+  }]);
+
+  return FontDisplay;
+}();
+
+
+/* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(83)))
+
+/***/ }),
+
 /***/ 21:
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -898,8 +998,8 @@ var styleList = ['normal', 'italic', 'oblique'];
 var settings = {
   sizeStep: 3,
   sizeBigMult: 10,
-  weightStep: 3,
-  weightBigMult: 10,
+  weightStep: 100,
+  weightBigMult: 2,
   fontStep: 1,
   fontBigMult: 1
 };
@@ -10863,7 +10963,8 @@ var FontChanger = function () {
         newFontWeight = val + x;
       }
 
-      this.elements.css('font-weight', newFontWeight);
+      this.elements.css("font-weight", newFontWeight);
+
       return true;
     }
   }, {

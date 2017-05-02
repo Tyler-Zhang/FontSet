@@ -75,9 +75,13 @@
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return KEY_BINDINGS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return AVAILABLE_FONTS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return SETTINGS; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return INITIALIZED; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return INITIALIZED; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return INITIALIZE_CLIENT; });
 /* unused harmony export CHANGE_CLIENT_SETTINGS */
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return TOP_LEFT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return TOP_RIGHT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return BOTTOM_LEFT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return BOTTOM_RIGHT; });
 var KEY_BINDINGS = 'KEY_BINDINGS';
 var AVAILABLE_FONTS = 'AVAILABLE_FONTS';
 var SETTINGS = 'SETTINGS';
@@ -85,6 +89,11 @@ var INITIALIZED = 'INITIALIZED';
 
 var INITIALIZE_CLIENT = "INITIALIZE_CLIENT";
 var CHANGE_CLIENT_SETTINGS = "CHANGE_CLIENT_SETTINGS";
+
+var TOP_LEFT = 'tl';
+var TOP_RIGHT = 'tr';
+var BOTTOM_LEFT = 'bl';
+var BOTTOM_RIGHT = 'br';
 
 /***/ }),
 
@@ -118,7 +127,7 @@ function startClient() {
 }
 
 chrome.storage.sync.get([__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["c" /* KEY_BINDINGS */], __WEBPACK_IMPORTED_MODULE_1__lib_definitions__["b" /* AVAILABLE_FONTS */], __WEBPACK_IMPORTED_MODULE_1__lib_definitions__["d" /* SETTINGS */]], function (items) {
-  if (!items[__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["e" /* INITIALIZED */]]) {
+  if (!items[__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["i" /* INITIALIZED */]]) {
     var _chrome$storage$sync$;
 
     // Load defaults into the settings
@@ -126,7 +135,7 @@ chrome.storage.sync.get([__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["c" /* K
       if (chrome.runtime.lastError) {
         console.error(chrome.runtime.lastError);
       } else {
-        chrome.storage.sync.set(_defineProperty({}, __WEBPACK_IMPORTED_MODULE_1__lib_definitions__["e" /* INITIALIZED */], true));
+        chrome.storage.sync.set(_defineProperty({}, __WEBPACK_IMPORTED_MODULE_1__lib_definitions__["i" /* INITIALIZED */], true));
         updateState();
       }
     });
@@ -217,8 +226,8 @@ var styleList = ['normal', 'italic', 'oblique'];
 var settings = {
   sizeStep: 3,
   sizeBigMult: 10,
-  weightStep: 3,
-  weightBigMult: 10,
+  weightStep: 100,
+  weightBigMult: 2,
   fontStep: 1,
   fontBigMult: 1
 };

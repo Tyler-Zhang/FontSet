@@ -26,8 +26,8 @@ export let styleList = ['normal', 'italic', 'oblique'];
 export let settings = {
   sizeStep: 3,
   sizeBigMult: 10,
-  weightStep: 3,
-  weightBigMult: 10,
+  weightStep: 100,
+  weightBigMult: 2,
   fontStep: 1,
   fontBigMult: 1
 }

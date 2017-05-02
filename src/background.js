@@ -1,5 +1,13 @@
-import { keyBindings as defKeyBindings, availableFonts as defAvailableFonts, settings as defsettings } from './lib/defaults';
-import { INITIALIZED, KEY_BINDINGS, AVAILABLE_FONTS, SETTINGS, INITIALIZE_CLIENT, CHANGE_CLIENT_SETTINGS } from './lib/definitions';
+import { 
+  keyBindings as defKeyBindings, 
+  availableFonts as defAvailableFonts, 
+  settings as defsettings 
+} from './lib/defaults';
+import { 
+  INITIALIZED, KEY_BINDINGS, 
+  AVAILABLE_FONTS, SETTINGS, 
+  INITIALIZE_CLIENT, CHANGE_CLIENT_SETTINGS 
+} from './lib/definitions';
 
 let currState;
 

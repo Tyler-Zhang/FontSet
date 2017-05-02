@@ -1980,9 +1980,13 @@ module.exports = DOMProperty;
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return KEY_BINDINGS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return AVAILABLE_FONTS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return SETTINGS; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return INITIALIZED; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return INITIALIZED; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return INITIALIZE_CLIENT; });
 /* unused harmony export CHANGE_CLIENT_SETTINGS */
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return TOP_LEFT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return TOP_RIGHT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return BOTTOM_LEFT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return BOTTOM_RIGHT; });
 var KEY_BINDINGS = 'KEY_BINDINGS';
 var AVAILABLE_FONTS = 'AVAILABLE_FONTS';
 var SETTINGS = 'SETTINGS';
@@ -1990,6 +1994,11 @@ var INITIALIZED = 'INITIALIZED';
 
 var INITIALIZE_CLIENT = "INITIALIZE_CLIENT";
 var CHANGE_CLIENT_SETTINGS = "CHANGE_CLIENT_SETTINGS";
+
+var TOP_LEFT = 'tl';
+var TOP_RIGHT = 'tr';
+var BOTTOM_LEFT = 'bl';
+var BOTTOM_RIGHT = 'br';
 
 /***/ }),
 /* 15 */

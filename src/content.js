@@ -2,6 +2,7 @@ import FontChanger from './lib/FontChanger';
 import { INITIALIZE_CLIENT, KEY_BINDINGS, AVAILABLE_FONTS, SETTINGS } from './lib/definitions';
 import { styleList } from './lib/defaults';
 import { selectHighlight } from './lib/actions';
+import FontDisplay from './lib/FontDisplay';
 import './scss/content.scss';
 
 
@@ -24,24 +25,31 @@ function initiate({ availableFonts, keyBindings, settings }) {
     settings
   });
 
+  let fontDisplay = new FontDisplay({corner: "tr"});
+
   let handleContext = {
     fontChanger,
+    fontDisplay,
     keyBindings,
     highlightedElement: null
   };
 
   document.addEventListener('mousemove', handleMouseMove.bind(handleContext));
   $(window).keypress(handleKeyPress.bind(handleContext));
+  
 }
 
 function handleKeyPress({ altKey, ctrlKey, metaKey, key }) {
   let action = this.keyBindings[key];
-  console.log(action);
   if (action == selectHighlight){
-    
     this.fontChanger.changeElements($(this.highlightedElement));
-  } else 
+    let state = this.fontChanger.getState();
+    this.fontDisplay.setData(state);
+  } else {
     this.fontChanger.action(action);
+    let state = this.fontChanger.getState();
+    this.fontDisplay.setData(state);
+  }
 }
 
 function handleMouseMove({ srcElement }) {
@@ -53,4 +61,8 @@ function handleMouseMove({ srcElement }) {
 
   $(srcElement).addClass('fontset-highlighted');
   this.highlightedElement = srcElement;
+}
+
+function handleSettingsChange(){
+
 }

@@ -20,7 +20,6 @@ export default class FontChanger {
     this.elements = elements;
     this.elements.addClass('fontset-selected');
     this.addStateToStack();
-    
   }
   /**
    * Changes the font of the elements
@@ -91,7 +90,8 @@ export default class FontChanger {
       newFontWeight = val + x;
     }
 
-    this.elements.css('font-weight', newFontWeight);
+    this.elements.css("font-weight", newFontWeight);
+
     return true;
   }
 
