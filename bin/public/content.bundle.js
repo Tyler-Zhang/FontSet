@@ -63,14 +63,855 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 3);
+/******/ 	return __webpack_require__(__webpack_require__.s = 196);
 /******/ })
 /************************************************************************/
-/******/ ([
-/* 0 */
+/******/ ({
+
+/***/ 105:
+/***/ (function(module, exports) {
+
+exports.read = function (buffer, offset, isLE, mLen, nBytes) {
+  var e, m;
+  var eLen = nBytes * 8 - mLen - 1;
+  var eMax = (1 << eLen) - 1;
+  var eBias = eMax >> 1;
+  var nBits = -7;
+  var i = isLE ? nBytes - 1 : 0;
+  var d = isLE ? -1 : 1;
+  var s = buffer[offset + i];
+
+  i += d;
+
+  e = s & (1 << -nBits) - 1;
+  s >>= -nBits;
+  nBits += eLen;
+  for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {}
+
+  m = e & (1 << -nBits) - 1;
+  e >>= -nBits;
+  nBits += mLen;
+  for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {}
+
+  if (e === 0) {
+    e = 1 - eBias;
+  } else if (e === eMax) {
+    return m ? NaN : (s ? -1 : 1) * Infinity;
+  } else {
+    m = m + Math.pow(2, mLen);
+    e = e - eBias;
+  }
+  return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
+};
+
+exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
+  var e, m, c;
+  var eLen = nBytes * 8 - mLen - 1;
+  var eMax = (1 << eLen) - 1;
+  var eBias = eMax >> 1;
+  var rt = mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0;
+  var i = isLE ? 0 : nBytes - 1;
+  var d = isLE ? 1 : -1;
+  var s = value < 0 || value === 0 && 1 / value < 0 ? 1 : 0;
+
+  value = Math.abs(value);
+
+  if (isNaN(value) || value === Infinity) {
+    m = isNaN(value) ? 1 : 0;
+    e = eMax;
+  } else {
+    e = Math.floor(Math.log(value) / Math.LN2);
+    if (value * (c = Math.pow(2, -e)) < 1) {
+      e--;
+      c *= 2;
+    }
+    if (e + eBias >= 1) {
+      value += rt / c;
+    } else {
+      value += rt * Math.pow(2, 1 - eBias);
+    }
+    if (value * c >= 2) {
+      e++;
+      c /= 2;
+    }
+
+    if (e + eBias >= eMax) {
+      m = 0;
+      e = eMax;
+    } else if (e + eBias >= 1) {
+      m = (value * c - 1) * Math.pow(2, mLen);
+      e = e + eBias;
+    } else {
+      m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
+      e = 0;
+    }
+  }
+
+  for (; mLen >= 8; buffer[offset + i] = m & 0xff, i += d, m /= 256, mLen -= 8) {}
+
+  e = e << mLen | m;
+  eLen += mLen;
+  for (; eLen > 0; buffer[offset + i] = e & 0xff, i += d, e /= 256, eLen -= 8) {}
+
+  buffer[offset + i - d] |= s * 128;
+};
+
+/***/ }),
+
+/***/ 106:
+/***/ (function(module, exports) {
+
+var toString = {}.toString;
+
+module.exports = Array.isArray || function (arr) {
+  return toString.call(arr) == '[object Array]';
+};
+
+/***/ }),
+
+/***/ 14:
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return KEY_BINDINGS; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return AVAILABLE_FONTS; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return SETTINGS; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return INITIALIZED; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return INITIALIZE_CLIENT; });
+/* unused harmony export CHANGE_CLIENT_SETTINGS */
+var KEY_BINDINGS = 'KEY_BINDINGS';
+var AVAILABLE_FONTS = 'AVAILABLE_FONTS';
+var SETTINGS = 'SETTINGS';
+var INITIALIZED = 'INITIALIZED';
+
+var INITIALIZE_CLIENT = "INITIALIZE_CLIENT";
+var CHANGE_CLIENT_SETTINGS = "CHANGE_CLIENT_SETTINGS";
+
+/***/ }),
+
+/***/ 192:
+/***/ (function(module, exports) {
+
+
+/**
+ * When source maps are enabled, `style-loader` uses a link element with a data-uri to
+ * embed the css on the page. This breaks all relative urls because now they are relative to a
+ * bundle instead of the current page.
+ *
+ * One solution is to only use full urls, but that may be impossible.
+ *
+ * Instead, this function "fixes" the relative urls to be absolute according to the current page location.
+ *
+ * A rudimentary test suite is located at `test/fixUrls.js` and can be run via the `npm test` command.
+ *
+ */
+
+module.exports = function (css) {
+	// get current location
+	var location = typeof window !== "undefined" && window.location;
+
+	if (!location) {
+		throw new Error("fixUrls requires window.location");
+	}
+
+	// blank or null?
+	if (!css || typeof css !== "string") {
+		return css;
+	}
+
+	var baseUrl = location.protocol + "//" + location.host;
+	var currentDir = baseUrl + location.pathname.replace(/\/[^\/]*$/, "/");
+
+	// convert each url(...)
+	/*
+ This regular expression is just a way to recursively match brackets within
+ a string.
+ 	 /url\s*\(  = Match on the word "url" with any whitespace after it and then a parens
+    (  = Start a capturing group
+      (?:  = Start a non-capturing group
+          [^)(]  = Match anything that isn't a parentheses
+          |  = OR
+          \(  = Match a start parentheses
+              (?:  = Start another non-capturing groups
+                  [^)(]+  = Match anything that isn't a parentheses
+                  |  = OR
+                  \(  = Match a start parentheses
+                      [^)(]*  = Match anything that isn't a parentheses
+                  \)  = Match a end parentheses
+              )  = End Group
+              *\) = Match anything and then a close parens
+          )  = Close non-capturing group
+          *  = Match anything
+       )  = Close capturing group
+  \)  = Match a close parens
+ 	 /gi  = Get all matches, not the first.  Be case insensitive.
+  */
+	var fixedCss = css.replace(/url\s*\(((?:[^)(]|\((?:[^)(]+|\([^)(]*\))*\))*)\)/gi, function (fullMatch, origUrl) {
+		// strip quotes (if they exist)
+		var unquotedOrigUrl = origUrl.trim().replace(/^"(.*)"$/, function (o, $1) {
+			return $1;
+		}).replace(/^'(.*)'$/, function (o, $1) {
+			return $1;
+		});
+
+		// already a full url? no change
+		if (/^(#|data:|http:\/\/|https:\/\/|file:\/\/\/)/i.test(unquotedOrigUrl)) {
+			return fullMatch;
+		}
+
+		// convert the url to a full url
+		var newUrl;
+
+		if (unquotedOrigUrl.indexOf("//") === 0) {
+			//TODO: should we add protocol?
+			newUrl = unquotedOrigUrl;
+		} else if (unquotedOrigUrl.indexOf("/") === 0) {
+			// path should be relative to the base url
+			newUrl = baseUrl + unquotedOrigUrl; // already starts with '/'
+		} else {
+			// path should be relative to current directory
+			newUrl = currentDir + unquotedOrigUrl.replace(/^\.\//, ""); // Strip leading './'
+		}
+
+		// send back the fixed url(...)
+		return "url(" + JSON.stringify(newUrl) + ")";
+	});
+
+	// send back the fixed css
+	return fixedCss;
+};
+
+/***/ }),
+
+/***/ 193:
+/***/ (function(module, exports) {
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var g;
+
+// This works in non-strict mode
+g = function () {
+	return this;
+}();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || Function("return this")() || (1, eval)("this");
+} catch (e) {
+	// This works if the window reference is available
+	if ((typeof window === "undefined" ? "undefined" : _typeof(window)) === "object") g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
+/***/ }),
+
+/***/ 194:
+/***/ (function(module, exports) {
+
+module.exports = function (module) {
+	if (!module.webpackPolyfill) {
+		module.deprecate = function () {};
+		module.paths = [];
+		// module.parent = undefined by default
+		if (!module.children) module.children = [];
+		Object.defineProperty(module, "loaded", {
+			enumerable: true,
+			get: function get() {
+				return module.l;
+			}
+		});
+		Object.defineProperty(module, "id", {
+			enumerable: true,
+			get: function get() {
+				return module.i;
+			}
+		});
+		module.webpackPolyfill = 1;
+	}
+	return module;
+};
+
+/***/ }),
+
+/***/ 196:
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function($) {Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__lib_FontChanger__ = __webpack_require__(86);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__lib_definitions__ = __webpack_require__(14);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__lib_defaults__ = __webpack_require__(27);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3__lib_actions__ = __webpack_require__(21);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__scss_content_scss__ = __webpack_require__(87);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_4__scss_content_scss___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_4__scss_content_scss__);
+
+
+
+
+
+
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+  if (request.type == __WEBPACK_IMPORTED_MODULE_1__lib_definitions__["a" /* INITIALIZE_CLIENT */]) {
+    initiate({
+      availableFonts: request[__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["b" /* AVAILABLE_FONTS */]],
+      keyBindings: request[__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["c" /* KEY_BINDINGS */]],
+      settings: request[__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["d" /* SETTINGS */]]
+    });
+  }
+});
+
+function initiate(_ref) {
+  var availableFonts = _ref.availableFonts,
+      keyBindings = _ref.keyBindings,
+      settings = _ref.settings;
+
+  var fontChanger = new __WEBPACK_IMPORTED_MODULE_0__lib_FontChanger__["a" /* default */]($(".name"), {
+    availableFonts: availableFonts,
+    styleList: __WEBPACK_IMPORTED_MODULE_2__lib_defaults__["a" /* styleList */],
+    settings: settings
+  });
+
+  var handleContext = {
+    fontChanger: fontChanger,
+    keyBindings: keyBindings,
+    highlightedElement: null
+  };
+
+  document.addEventListener('mousemove', handleMouseMove.bind(handleContext));
+  $(window).keypress(handleKeyPress.bind(handleContext));
+}
+
+function handleKeyPress(_ref2) {
+  var altKey = _ref2.altKey,
+      ctrlKey = _ref2.ctrlKey,
+      metaKey = _ref2.metaKey,
+      key = _ref2.key;
+
+  var action = this.keyBindings[key];
+  console.log(action);
+  if (action == __WEBPACK_IMPORTED_MODULE_3__lib_actions__["a" /* selectHighlight */]) {
+
+    this.fontChanger.changeElements($(this.highlightedElement));
+  } else this.fontChanger.action(action);
+}
+
+function handleMouseMove(_ref3) {
+  var srcElement = _ref3.srcElement;
+
+  if (srcElement == this.highlightedElement) return;
+
+  if (this.highlightedElement) {
+    $(this.highlightedElement).removeClass('fontset-highlighted');
+  }
+
+  $(srcElement).addClass('fontset-highlighted');
+  this.highlightedElement = srcElement;
+}
+/* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(83)))
+
+/***/ }),
+
+/***/ 197:
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/**
+ * JavaScript code to detect available availability of a
+ * particular font in a browser using JavaScript and CSS.
+ *
+ * Author : Lalit Patel
+ * Website: http://www.lalit.org/lab/javascript-css-font-detect/
+ * License: Apache Software License 2.0
+ *          http://www.apache.org/licenses/LICENSE-2.0
+ * Version: 0.15 (21 Sep 2009)
+ *          Changed comparision font to default from sans-default-default,
+ *          as in FF3.0 font of child element didn't fallback
+ *          to parent element if the font is missing.
+ * Version: 0.2 (04 Mar 2012)
+ *          Comparing font against all the 3 generic font families ie,
+ *          'monospace', 'sans-serif' and 'sans'. If it doesn't match all 3
+ *          then that font is 100% not available in the system
+ * Version: 0.3 (24 Mar 2012)
+ *          Replaced sans with serif in the list of baseFonts
+ */
+
+/**
+ * Usage: d = new Detector();
+ *        d.detect('font name');
+ */
+var Detector = function Detector() {
+    // a font will be compared against all the three default fonts.
+    // and if it doesn't match all 3 then that font is not available.
+    var baseFonts = ['monospace', 'sans-serif', 'serif'];
+
+    //we use m or w because these two characters take up the maximum width.
+    // And we use a LLi so that the same matching fonts can get separated
+    var testString = "mmmmmmmmmmlli";
+
+    //we test using 72px font size, we may use any size. I guess larger the better.
+    var testSize = '72px';
+
+    var h = document.getElementsByTagName("body")[0];
+
+    // create a SPAN in the document to get the width of the text we use to test
+    var s = document.createElement("span");
+    s.style.fontSize = testSize;
+    s.innerHTML = testString;
+    var defaultWidth = {};
+    var defaultHeight = {};
+    for (var index in baseFonts) {
+        //get the default width for the three base fonts
+        s.style.fontFamily = baseFonts[index];
+        h.appendChild(s);
+        defaultWidth[baseFonts[index]] = s.offsetWidth; //width for the default font
+        defaultHeight[baseFonts[index]] = s.offsetHeight; //height for the defualt font
+        h.removeChild(s);
+    }
+
+    function detect(font) {
+        var detected = false;
+        for (var _index in baseFonts) {
+            s.style.fontFamily = font + ',' + baseFonts[_index]; // name of the font along with the base font for fallback.
+            h.appendChild(s);
+            var matched = s.offsetWidth != defaultWidth[baseFonts[_index]] || s.offsetHeight != defaultHeight[baseFonts[_index]];
+            h.removeChild(s);
+            detected = detected || matched;
+        }
+        return detected;
+    }
+
+    this.detect = detect;
+};
+
+/* unused harmony default export */ var _unused_webpack_default_export = (new Detector());
+
+/***/ }),
+
+/***/ 200:
 /***/ (function(module, exports, __webpack_require__) {
 
-var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
+exports = module.exports = __webpack_require__(90)(undefined);
+// imports
+
+
+// module
+exports.push([module.i, ".fontset-highlighted {\n  border: 1px solid blue; }\n", ""]);
+
+// exports
+
+
+/***/ }),
+
+/***/ 201:
+/***/ (function(module, exports, __webpack_require__) {
+
+/*
+	MIT License http://www.opensource.org/licenses/mit-license.php
+	Author Tobias Koppers @sokra
+*/
+var stylesInDom = {},
+	memoize = function(fn) {
+		var memo;
+		return function () {
+			if (typeof memo === "undefined") memo = fn.apply(this, arguments);
+			return memo;
+		};
+	},
+	isOldIE = memoize(function() {
+		// Test for IE <= 9 as proposed by Browserhacks
+		// @see http://browserhacks.com/#hack-e71d8692f65334173fee715c222cb805
+		// Tests for existence of standard globals is to allow style-loader 
+		// to operate correctly into non-standard environments
+		// @see https://github.com/webpack-contrib/style-loader/issues/177
+		return window && document && document.all && !window.atob;
+	}),
+	getElement = (function(fn) {
+		var memo = {};
+		return function(selector) {
+			if (typeof memo[selector] === "undefined") {
+				memo[selector] = fn.call(this, selector);
+			}
+			return memo[selector]
+		};
+	})(function (styleTarget) {
+		return document.querySelector(styleTarget)
+	}),
+	singletonElement = null,
+	singletonCounter = 0,
+	styleElementsInsertedAtTop = [],
+	fixUrls = __webpack_require__(192);
+
+module.exports = function(list, options) {
+	if(typeof DEBUG !== "undefined" && DEBUG) {
+		if(typeof document !== "object") throw new Error("The style-loader cannot be used in a non-browser environment");
+	}
+
+	options = options || {};
+	options.attrs = typeof options.attrs === "object" ? options.attrs : {};
+
+	// Force single-tag solution on IE6-9, which has a hard limit on the # of <style>
+	// tags it will allow on a page
+	if (typeof options.singleton === "undefined") options.singleton = isOldIE();
+
+	// By default, add <style> tags to the <head> element
+	if (typeof options.insertInto === "undefined") options.insertInto = "head";
+
+	// By default, add <style> tags to the bottom of the target
+	if (typeof options.insertAt === "undefined") options.insertAt = "bottom";
+
+	var styles = listToStyles(list, options);
+	addStylesToDom(styles, options);
+
+	return function update(newList) {
+		var mayRemove = [];
+		for(var i = 0; i < styles.length; i++) {
+			var item = styles[i];
+			var domStyle = stylesInDom[item.id];
+			domStyle.refs--;
+			mayRemove.push(domStyle);
+		}
+		if(newList) {
+			var newStyles = listToStyles(newList, options);
+			addStylesToDom(newStyles, options);
+		}
+		for(var i = 0; i < mayRemove.length; i++) {
+			var domStyle = mayRemove[i];
+			if(domStyle.refs === 0) {
+				for(var j = 0; j < domStyle.parts.length; j++)
+					domStyle.parts[j]();
+				delete stylesInDom[domStyle.id];
+			}
+		}
+	};
+};
+
+function addStylesToDom(styles, options) {
+	for(var i = 0; i < styles.length; i++) {
+		var item = styles[i];
+		var domStyle = stylesInDom[item.id];
+		if(domStyle) {
+			domStyle.refs++;
+			for(var j = 0; j < domStyle.parts.length; j++) {
+				domStyle.parts[j](item.parts[j]);
+			}
+			for(; j < item.parts.length; j++) {
+				domStyle.parts.push(addStyle(item.parts[j], options));
+			}
+		} else {
+			var parts = [];
+			for(var j = 0; j < item.parts.length; j++) {
+				parts.push(addStyle(item.parts[j], options));
+			}
+			stylesInDom[item.id] = {id: item.id, refs: 1, parts: parts};
+		}
+	}
+}
+
+function listToStyles(list, options) {
+	var styles = [];
+	var newStyles = {};
+	for(var i = 0; i < list.length; i++) {
+		var item = list[i];
+		var id = options.base ? item[0] + options.base : item[0];
+		var css = item[1];
+		var media = item[2];
+		var sourceMap = item[3];
+		var part = {css: css, media: media, sourceMap: sourceMap};
+		if(!newStyles[id])
+			styles.push(newStyles[id] = {id: id, parts: [part]});
+		else
+			newStyles[id].parts.push(part);
+	}
+	return styles;
+}
+
+function insertStyleElement(options, styleElement) {
+	var styleTarget = getElement(options.insertInto)
+	if (!styleTarget) {
+		throw new Error("Couldn't find a style target. This probably means that the value for the 'insertInto' parameter is invalid.");
+	}
+	var lastStyleElementInsertedAtTop = styleElementsInsertedAtTop[styleElementsInsertedAtTop.length - 1];
+	if (options.insertAt === "top") {
+		if(!lastStyleElementInsertedAtTop) {
+			styleTarget.insertBefore(styleElement, styleTarget.firstChild);
+		} else if(lastStyleElementInsertedAtTop.nextSibling) {
+			styleTarget.insertBefore(styleElement, lastStyleElementInsertedAtTop.nextSibling);
+		} else {
+			styleTarget.appendChild(styleElement);
+		}
+		styleElementsInsertedAtTop.push(styleElement);
+	} else if (options.insertAt === "bottom") {
+		styleTarget.appendChild(styleElement);
+	} else {
+		throw new Error("Invalid value for parameter 'insertAt'. Must be 'top' or 'bottom'.");
+	}
+}
+
+function removeStyleElement(styleElement) {
+	styleElement.parentNode.removeChild(styleElement);
+	var idx = styleElementsInsertedAtTop.indexOf(styleElement);
+	if(idx >= 0) {
+		styleElementsInsertedAtTop.splice(idx, 1);
+	}
+}
+
+function createStyleElement(options) {
+	var styleElement = document.createElement("style");
+	options.attrs.type = "text/css";
+
+	attachTagAttrs(styleElement, options.attrs);
+	insertStyleElement(options, styleElement);
+	return styleElement;
+}
+
+function createLinkElement(options) {
+	var linkElement = document.createElement("link");
+	options.attrs.type = "text/css";
+	options.attrs.rel = "stylesheet";
+
+	attachTagAttrs(linkElement, options.attrs);
+	insertStyleElement(options, linkElement);
+	return linkElement;
+}
+
+function attachTagAttrs(element, attrs) {
+	Object.keys(attrs).forEach(function (key) {
+		element.setAttribute(key, attrs[key]);
+	});
+}
+
+function addStyle(obj, options) {
+	var styleElement, update, remove, transformResult;
+
+	// If a transform function was defined, run it on the css
+	if (options.transform && obj.css) {
+	    transformResult = options.transform(obj.css);
+	    
+	    if (transformResult) {
+	    	// If transform returns a value, use that instead of the original css.
+	    	// This allows running runtime transformations on the css.
+	    	obj.css = transformResult;
+	    } else {
+	    	// If the transform function returns a falsy value, don't add this css. 
+	    	// This allows conditional loading of css
+	    	return function() {
+	    		// noop
+	    	};
+	    }
+	}
+
+	if (options.singleton) {
+		var styleIndex = singletonCounter++;
+		styleElement = singletonElement || (singletonElement = createStyleElement(options));
+		update = applyToSingletonTag.bind(null, styleElement, styleIndex, false);
+		remove = applyToSingletonTag.bind(null, styleElement, styleIndex, true);
+	} else if(obj.sourceMap &&
+		typeof URL === "function" &&
+		typeof URL.createObjectURL === "function" &&
+		typeof URL.revokeObjectURL === "function" &&
+		typeof Blob === "function" &&
+		typeof btoa === "function") {
+		styleElement = createLinkElement(options);
+		update = updateLink.bind(null, styleElement, options);
+		remove = function() {
+			removeStyleElement(styleElement);
+			if(styleElement.href)
+				URL.revokeObjectURL(styleElement.href);
+		};
+	} else {
+		styleElement = createStyleElement(options);
+		update = applyToTag.bind(null, styleElement);
+		remove = function() {
+			removeStyleElement(styleElement);
+		};
+	}
+
+	update(obj);
+
+	return function updateStyle(newObj) {
+		if(newObj) {
+			if(newObj.css === obj.css && newObj.media === obj.media && newObj.sourceMap === obj.sourceMap)
+				return;
+			update(obj = newObj);
+		} else {
+			remove();
+		}
+	};
+}
+
+var replaceText = (function () {
+	var textStore = [];
+
+	return function (index, replacement) {
+		textStore[index] = replacement;
+		return textStore.filter(Boolean).join('\n');
+	};
+})();
+
+function applyToSingletonTag(styleElement, index, remove, obj) {
+	var css = remove ? "" : obj.css;
+
+	if (styleElement.styleSheet) {
+		styleElement.styleSheet.cssText = replaceText(index, css);
+	} else {
+		var cssNode = document.createTextNode(css);
+		var childNodes = styleElement.childNodes;
+		if (childNodes[index]) styleElement.removeChild(childNodes[index]);
+		if (childNodes.length) {
+			styleElement.insertBefore(cssNode, childNodes[index]);
+		} else {
+			styleElement.appendChild(cssNode);
+		}
+	}
+}
+
+function applyToTag(styleElement, obj) {
+	var css = obj.css;
+	var media = obj.media;
+
+	if(media) {
+		styleElement.setAttribute("media", media)
+	}
+
+	if(styleElement.styleSheet) {
+		styleElement.styleSheet.cssText = css;
+	} else {
+		while(styleElement.firstChild) {
+			styleElement.removeChild(styleElement.firstChild);
+		}
+		styleElement.appendChild(document.createTextNode(css));
+	}
+}
+
+function updateLink(linkElement, options, obj) {
+	var css = obj.css;
+	var sourceMap = obj.sourceMap;
+
+	/* If convertToAbsoluteUrls isn't defined, but sourcemaps are enabled
+	and there is no publicPath defined then lets turn convertToAbsoluteUrls
+	on by default.  Otherwise default to the convertToAbsoluteUrls option
+	directly
+	*/
+	var autoFixUrls = options.convertToAbsoluteUrls === undefined && sourceMap;
+
+	if (options.convertToAbsoluteUrls || autoFixUrls){
+		css = fixUrls(css);
+	}
+
+	if(sourceMap) {
+		// http://stackoverflow.com/a/26603875
+		css += "\n/*# sourceMappingURL=data:application/json;base64," + btoa(unescape(encodeURIComponent(JSON.stringify(sourceMap)))) + " */";
+	}
+
+	var blob = new Blob([css], { type: "text/css" });
+
+	var oldSrc = linkElement.href;
+
+	linkElement.href = URL.createObjectURL(blob);
+
+	if(oldSrc)
+		URL.revokeObjectURL(oldSrc);
+}
+
+
+/***/ }),
+
+/***/ 21:
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return incSize; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return incSizeBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return decSize; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return decSizeBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return incFontWeight; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return incFontWeightBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return decFontWeight; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return decFontWeightBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "j", function() { return nextFont; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "k", function() { return nextFontBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "l", function() { return prevFont; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "m", function() { return prevFontBig; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "q", function() { return changeFont; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "n", function() { return changeFontStyle; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "o", function() { return search; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "p", function() { return undo; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return selectHighlight; });
+var incSize = 'incSize';
+var incSizeBig = 'incSizeBig';
+var decSize = 'decSize';
+var decSizeBig = 'decSizeBig';
+var incFontWeight = 'incFontWeight';
+var incFontWeightBig = 'incFontWeightBig';
+var decFontWeight = 'decFontWeight';
+var decFontWeightBig = 'decFontWeightBig';
+var nextFont = 'nextFont';
+var nextFontBig = 'nextFontBig';
+var prevFont = 'prevFont';
+var prevFontBig = 'prevFontBig';
+var changeFont = 'changefont';
+var changeFontStyle = 'changeFontStyle';
+var search = 'search';
+var undo = 'undo';
+var selectHighlight = 'selectHighlight';
+
+/***/ }),
+
+/***/ 27:
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__actions__ = __webpack_require__(21);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return keyBindings; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return availableFonts; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return styleList; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return settings; });
+
+
+var keyBindings = {
+  w: __WEBPACK_IMPORTED_MODULE_0__actions__["b" /* incSize */],
+  W: __WEBPACK_IMPORTED_MODULE_0__actions__["c" /* incSizeBig */],
+  s: __WEBPACK_IMPORTED_MODULE_0__actions__["d" /* decSize */],
+  S: __WEBPACK_IMPORTED_MODULE_0__actions__["e" /* decSizeBig */],
+  r: __WEBPACK_IMPORTED_MODULE_0__actions__["f" /* incFontWeight */],
+  R: __WEBPACK_IMPORTED_MODULE_0__actions__["g" /* incFontWeightBig */],
+  f: __WEBPACK_IMPORTED_MODULE_0__actions__["h" /* decFontWeight */],
+  F: __WEBPACK_IMPORTED_MODULE_0__actions__["i" /* decFontWeightBig */],
+  d: __WEBPACK_IMPORTED_MODULE_0__actions__["j" /* nextFont */],
+  D: __WEBPACK_IMPORTED_MODULE_0__actions__["k" /* nextFontBig */],
+  a: __WEBPACK_IMPORTED_MODULE_0__actions__["l" /* prevFont */],
+  A: __WEBPACK_IMPORTED_MODULE_0__actions__["m" /* prevFontBig */],
+  q: __WEBPACK_IMPORTED_MODULE_0__actions__["n" /* changeFontStyle */],
+  t: __WEBPACK_IMPORTED_MODULE_0__actions__["o" /* search */],
+  u: __WEBPACK_IMPORTED_MODULE_0__actions__["p" /* undo */],
+  z: __WEBPACK_IMPORTED_MODULE_0__actions__["a" /* selectHighlight */]
+};
+
+var availableFonts = ['Palatino', 'Garamond', 'Bookman', 'Avant Garde', 'Verdana', 'Georgia', 'Comic Sans MS', 'Trebuchet MS', 'Arial Black', 'Impact'];
+var styleList = ['normal', 'italic', 'oblique'];
+var settings = {
+  sizeStep: 3,
+  sizeBigMult: 10,
+  weightStep: 3,
+  weightBigMult: 10,
+  fontStep: 1,
+  fontBigMult: 1
+};
+
+/***/ }),
+
+/***/ 83:
+/***/ (function(module, exports, __webpack_require__) {
+
+/* WEBPACK VAR INJECTION */(function(module) {var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+/*!
  * jQuery JavaScript Library v3.2.1
  * https://jquery.com/
  *
@@ -87,7 +928,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	"use strict";
 
-	if (typeof module === "object" && typeof module.exports === "object") {
+	if (( false ? "undefined" : _typeof(module)) === "object" && _typeof(module.exports) === "object") {
 
 		// For CommonJS and CommonJS-like environments where a proper `window`
 		// is present, execute the factory and get jQuery.
@@ -121,7 +962,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	var getProto = Object.getPrototypeOf;
 
-	var slice = arr.slice;
+	var _slice = arr.slice;
 
 	var concat = arr.concat;
 
@@ -158,7 +999,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 
 	// Define a local copy of jQuery
-	jQuery = function (selector, context) {
+	jQuery = function jQuery(selector, context) {
 
 		// The jQuery object is actually just the init constructor 'enhanced'
 		// Need init if jQuery is called (just allow error to be thrown if not included)
@@ -177,7 +1018,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 
 	// Used by jQuery.camelCase as callback to replace()
-	fcamelCase = function (all, letter) {
+	fcamelCase = function fcamelCase(all, letter) {
 		return letter.toUpperCase();
 	};
 
@@ -191,17 +1032,17 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		// The default length of a jQuery object is 0
 		length: 0,
 
-		toArray: function () {
-			return slice.call(this);
+		toArray: function toArray() {
+			return _slice.call(this);
 		},
 
 		// Get the Nth element in the matched element set OR
 		// Get the whole matched element set as a clean array
-		get: function (num) {
+		get: function get(num) {
 
 			// Return all the elements in a clean array
 			if (num == null) {
-				return slice.call(this);
+				return _slice.call(this);
 			}
 
 			// Return just the one element from the set
@@ -210,7 +1051,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		// Take an array of elements and push it onto the stack
 		// (returning the new matched element set)
-		pushStack: function (elems) {
+		pushStack: function pushStack(elems) {
 
 			// Build a new jQuery matched element set
 			var ret = jQuery.merge(this.constructor(), elems);
@@ -223,35 +1064,35 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		},
 
 		// Execute a callback for every element in the matched set.
-		each: function (callback) {
+		each: function each(callback) {
 			return jQuery.each(this, callback);
 		},
 
-		map: function (callback) {
+		map: function map(callback) {
 			return this.pushStack(jQuery.map(this, function (elem, i) {
 				return callback.call(elem, i, elem);
 			}));
 		},
 
-		slice: function () {
-			return this.pushStack(slice.apply(this, arguments));
+		slice: function slice() {
+			return this.pushStack(_slice.apply(this, arguments));
 		},
 
-		first: function () {
+		first: function first() {
 			return this.eq(0);
 		},
 
-		last: function () {
+		last: function last() {
 			return this.eq(-1);
 		},
 
-		eq: function (i) {
+		eq: function eq(i) {
 			var len = this.length,
 			    j = +i + (i < 0 ? len : 0);
 			return this.pushStack(j >= 0 && j < len ? [this[j]] : []);
 		},
 
-		end: function () {
+		end: function end() {
 			return this.prevObject || this.constructor();
 		},
 
@@ -284,7 +1125,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		}
 
 		// Handle case when target is a string or something (possible in deep copy)
-		if (typeof target !== "object" && !jQuery.isFunction(target)) {
+		if ((typeof target === "undefined" ? "undefined" : _typeof(target)) !== "object" && !jQuery.isFunction(target)) {
 			target = {};
 		}
 
@@ -342,21 +1183,21 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		// Assume jQuery is ready without the ready module
 		isReady: true,
 
-		error: function (msg) {
+		error: function error(msg) {
 			throw new Error(msg);
 		},
 
-		noop: function () {},
+		noop: function noop() {},
 
-		isFunction: function (obj) {
+		isFunction: function isFunction(obj) {
 			return jQuery.type(obj) === "function";
 		},
 
-		isWindow: function (obj) {
+		isWindow: function isWindow(obj) {
 			return obj != null && obj === obj.window;
 		},
 
-		isNumeric: function (obj) {
+		isNumeric: function isNumeric(obj) {
 
 			// As of jQuery 3.0, isNumeric is limited to
 			// strings and numbers (primitives or objects)
@@ -370,7 +1211,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			!isNaN(obj - parseFloat(obj));
 		},
 
-		isPlainObject: function (obj) {
+		isPlainObject: function isPlainObject(obj) {
 			var proto, Ctor;
 
 			// Detect obvious negatives
@@ -391,7 +1232,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return typeof Ctor === "function" && fnToString.call(Ctor) === ObjectFunctionString;
 		},
 
-		isEmptyObject: function (obj) {
+		isEmptyObject: function isEmptyObject(obj) {
 
 			/* eslint-disable no-unused-vars */
 			// See https://github.com/eslint/eslint/issues/6125
@@ -403,28 +1244,28 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return true;
 		},
 
-		type: function (obj) {
+		type: function type(obj) {
 			if (obj == null) {
 				return obj + "";
 			}
 
 			// Support: Android <=2.3 only (functionish RegExp)
-			return typeof obj === "object" || typeof obj === "function" ? class2type[toString.call(obj)] || "object" : typeof obj;
+			return (typeof obj === "undefined" ? "undefined" : _typeof(obj)) === "object" || typeof obj === "function" ? class2type[toString.call(obj)] || "object" : typeof obj === "undefined" ? "undefined" : _typeof(obj);
 		},
 
 		// Evaluates a script in a global context
-		globalEval: function (code) {
+		globalEval: function globalEval(code) {
 			DOMEval(code);
 		},
 
 		// Convert dashed to camelCase; used by the css and data modules
 		// Support: IE <=9 - 11, Edge 12 - 13
 		// Microsoft forgot to hump their vendor prefix (#9572)
-		camelCase: function (string) {
+		camelCase: function camelCase(string) {
 			return string.replace(rmsPrefix, "ms-").replace(rdashAlpha, fcamelCase);
 		},
 
-		each: function (obj, callback) {
+		each: function each(obj, callback) {
 			var length,
 			    i = 0;
 
@@ -447,12 +1288,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		},
 
 		// Support: Android <=4.0 only
-		trim: function (text) {
+		trim: function trim(text) {
 			return text == null ? "" : (text + "").replace(rtrim, "");
 		},
 
 		// results is for internal usage only
-		makeArray: function (arr, results) {
+		makeArray: function makeArray(arr, results) {
 			var ret = results || [];
 
 			if (arr != null) {
@@ -466,13 +1307,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return ret;
 		},
 
-		inArray: function (elem, arr, i) {
+		inArray: function inArray(elem, arr, i) {
 			return arr == null ? -1 : indexOf.call(arr, elem, i);
 		},
 
 		// Support: Android <=4.0 only, PhantomJS 1 only
 		// push.apply(_, arraylike) throws on ancient WebKit
-		merge: function (first, second) {
+		merge: function merge(first, second) {
 			var len = +second.length,
 			    j = 0,
 			    i = first.length;
@@ -486,7 +1327,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return first;
 		},
 
-		grep: function (elems, callback, invert) {
+		grep: function grep(elems, callback, invert) {
 			var callbackInverse,
 			    matches = [],
 			    i = 0,
@@ -506,7 +1347,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		},
 
 		// arg is for internal usage only
-		map: function (elems, callback, arg) {
+		map: function map(elems, callback, arg) {
 			var length,
 			    value,
 			    i = 0,
@@ -543,7 +1384,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		// Bind a function to a context, optionally partially applying any
 		// arguments.
-		proxy: function (fn, context) {
+		proxy: function proxy(fn, context) {
 			var tmp, args, proxy;
 
 			if (typeof context === "string") {
@@ -559,9 +1400,9 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}
 
 			// Simulated bind
-			args = slice.call(arguments, 2);
-			proxy = function () {
-				return fn.apply(context || this, args.concat(slice.call(arguments)));
+			args = _slice.call(arguments, 2);
+			proxy = function proxy() {
+				return fn.apply(context || this, args.concat(_slice.call(arguments)));
 			};
 
 			// Set the guid of unique handler to the same of original handler, so it can be removed
@@ -646,7 +1487,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		    classCache = createCache(),
 		    tokenCache = createCache(),
 		    compilerCache = createCache(),
-		    sortOrder = function (a, b) {
+		    sortOrder = function sortOrder(a, b) {
 			if (a === b) {
 				hasDuplicate = true;
 			}
@@ -664,7 +1505,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		// Use a stripped-down indexOf as it's faster than native
 		// https://jsperf.com/thor-indexof-vs-for/5
-		indexOf = function (list, elem) {
+		indexOf = function indexOf(list, elem) {
 			var i = 0,
 			    len = list.length;
 			for (; i < len; i++) {
@@ -736,7 +1577,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		// CSS escapes
 		// http://www.w3.org/TR/CSS21/syndata.html#escaped-characters
 		runescape = new RegExp("\\\\([\\da-f]{1,6}" + whitespace + "?|(" + whitespace + ")|.)", "ig"),
-		    funescape = function (_, escaped, escapedWhitespace) {
+		    funescape = function funescape(_, escaped, escapedWhitespace) {
 			var high = "0x" + escaped - 0x10000;
 			// NaN means non-codepoint
 			// Support: Firefox<24
@@ -752,7 +1593,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		// CSS string/identifier serialization
 		// https://drafts.csswg.org/cssom/#common-serializing-idioms
 		rcssescape = /([\0-\x1f\x7f]|^-?\d)|^-$|[^\0-\x1f\x7f-\uFFFF\w-]/g,
-		    fcssescape = function (ch, asCodePoint) {
+		    fcssescape = function fcssescape(ch, asCodePoint) {
 			if (asCodePoint) {
 
 				// U+0000 NULL becomes U+FFFD REPLACEMENT CHARACTER
@@ -773,7 +1614,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		// See setDocument()
 		// Removing the function wrapper causes a "Permission Denied"
 		// error in IE
-		unloadHandler = function () {
+		unloadHandler = function unloadHandler() {
 			setDocument();
 		},
 		    disabledAncestor = addCombinator(function (elem) {
@@ -1681,7 +2522,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			},
 
 			preFilter: {
-				"ATTR": function (match) {
+				"ATTR": function ATTR(match) {
 					match[1] = match[1].replace(runescape, funescape);
 
 					// Move the given value to match[3] whether quoted or unquoted
@@ -1694,7 +2535,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					return match.slice(0, 4);
 				},
 
-				"CHILD": function (match) {
+				"CHILD": function CHILD(match) {
 					/* matches from matchExpr["CHILD"]
      	1 type (only|nth|...)
      	2 what (child|of-type)
@@ -1726,7 +2567,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					return match;
 				},
 
-				"PSEUDO": function (match) {
+				"PSEUDO": function PSEUDO(match) {
 					var excess,
 					    unquoted = !match[6] && match[2];
 
@@ -1757,7 +2598,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 			filter: {
 
-				"TAG": function (nodeNameSelector) {
+				"TAG": function TAG(nodeNameSelector) {
 					var nodeName = nodeNameSelector.replace(runescape, funescape).toLowerCase();
 					return nodeNameSelector === "*" ? function () {
 						return true;
@@ -1766,7 +2607,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					};
 				},
 
-				"CLASS": function (className) {
+				"CLASS": function CLASS(className) {
 					var pattern = classCache[className + " "];
 
 					return pattern || (pattern = new RegExp("(^|" + whitespace + ")" + className + "(" + whitespace + "|$)")) && classCache(className, function (elem) {
@@ -1774,7 +2615,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					});
 				},
 
-				"ATTR": function (name, operator, check) {
+				"ATTR": function ATTR(name, operator, check) {
 					return function (elem) {
 						var result = Sizzle.attr(elem, name);
 
@@ -1791,7 +2632,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					};
 				},
 
-				"CHILD": function (type, what, argument, first, last) {
+				"CHILD": function CHILD(type, what, argument, first, last) {
 					var simple = type.slice(0, 3) !== "nth",
 					    forward = type.slice(-4) !== "last",
 					    ofType = what === "of-type";
@@ -1913,7 +2754,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					};
 				},
 
-				"PSEUDO": function (pseudo, argument) {
+				"PSEUDO": function PSEUDO(pseudo, argument) {
 					// pseudo-class names are case-insensitive
 					// http://www.w3.org/TR/selectors/#pseudo-classes
 					// Prioritize by case sensitivity in case custom pseudos are added with uppercase letters
@@ -2018,16 +2859,16 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				}),
 
 				// Miscellaneous
-				"target": function (elem) {
+				"target": function target(elem) {
 					var hash = window.location && window.location.hash;
 					return hash && hash.slice(1) === elem.id;
 				},
 
-				"root": function (elem) {
+				"root": function root(elem) {
 					return elem === docElem;
 				},
 
-				"focus": function (elem) {
+				"focus": function focus(elem) {
 					return elem === document.activeElement && (!document.hasFocus || document.hasFocus()) && !!(elem.type || elem.href || ~elem.tabIndex);
 				},
 
@@ -2035,14 +2876,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				"enabled": createDisabledPseudo(false),
 				"disabled": createDisabledPseudo(true),
 
-				"checked": function (elem) {
+				"checked": function checked(elem) {
 					// In CSS3, :checked should return both checked and selected elements
 					// http://www.w3.org/TR/2011/REC-css3-selectors-20110929/#checked
 					var nodeName = elem.nodeName.toLowerCase();
 					return nodeName === "input" && !!elem.checked || nodeName === "option" && !!elem.selected;
 				},
 
-				"selected": function (elem) {
+				"selected": function selected(elem) {
 					// Accessing this property makes selected-by-default
 					// options in Safari work properly
 					if (elem.parentNode) {
@@ -2053,7 +2894,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				},
 
 				// Contents
-				"empty": function (elem) {
+				"empty": function empty(elem) {
 					// http://www.w3.org/TR/selectors/#empty-pseudo
 					// :empty is negated by element (1) or content nodes (text: 3; cdata: 4; entity ref: 5),
 					//   but not by others (comment: 8; processing instruction: 7; etc.)
@@ -2066,25 +2907,25 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					return true;
 				},
 
-				"parent": function (elem) {
+				"parent": function parent(elem) {
 					return !Expr.pseudos["empty"](elem);
 				},
 
 				// Element/input types
-				"header": function (elem) {
+				"header": function header(elem) {
 					return rheader.test(elem.nodeName);
 				},
 
-				"input": function (elem) {
+				"input": function input(elem) {
 					return rinputs.test(elem.nodeName);
 				},
 
-				"button": function (elem) {
+				"button": function button(elem) {
 					var name = elem.nodeName.toLowerCase();
 					return name === "input" && elem.type === "button" || name === "button";
 				},
 
-				"text": function (elem) {
+				"text": function text(elem) {
 					var attr;
 					return elem.nodeName.toLowerCase() === "input" && elem.type === "text" && (
 
@@ -2481,7 +3322,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		function matcherFromGroupMatchers(elementMatchers, setMatchers) {
 			var bySet = setMatchers.length > 0,
 			    byElement = elementMatchers.length > 0,
-			    superMatcher = function (seed, context, xml, results, outermost) {
+			    superMatcher = function superMatcher(seed, context, xml, results, outermost) {
 				var elem,
 				    j,
 				    matcher,
@@ -2767,11 +3608,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	jQuery.contains = Sizzle.contains;
 	jQuery.escapeSelector = Sizzle.escape;
 
-	var dir = function (elem, dir, until) {
+	var dir = function dir(elem, _dir, until) {
 		var matched = [],
 		    truncate = until !== undefined;
 
-		while ((elem = elem[dir]) && elem.nodeType !== 9) {
+		while ((elem = elem[_dir]) && elem.nodeType !== 9) {
 			if (elem.nodeType === 1) {
 				if (truncate && jQuery(elem).is(until)) {
 					break;
@@ -2782,7 +3623,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		return matched;
 	};
 
-	var siblings = function (n, elem) {
+	var _siblings = function _siblings(n, elem) {
 		var matched = [];
 
 		for (; n; n = n.nextSibling) {
@@ -2855,7 +3696,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	};
 
 	jQuery.fn.extend({
-		find: function (selector) {
+		find: function find(selector) {
 			var i,
 			    ret,
 			    len = this.length,
@@ -2879,13 +3720,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 			return len > 1 ? jQuery.uniqueSort(ret) : ret;
 		},
-		filter: function (selector) {
+		filter: function filter(selector) {
 			return this.pushStack(winnow(this, selector || [], false));
 		},
-		not: function (selector) {
+		not: function not(selector) {
 			return this.pushStack(winnow(this, selector || [], true));
 		},
-		is: function (selector) {
+		is: function is(selector) {
 			return !!winnow(this,
 
 			// If this is a positional/relative selector, check membership in the returned set
@@ -3015,7 +3856,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	};
 
 	jQuery.fn.extend({
-		has: function (target) {
+		has: function has(target) {
 			var targets = jQuery(target, this),
 			    l = targets.length;
 
@@ -3029,7 +3870,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 		},
 
-		closest: function (selectors, context) {
+		closest: function closest(selectors, context) {
 			var cur,
 			    i = 0,
 			    l = this.length,
@@ -3058,7 +3899,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		},
 
 		// Determine the position of an element within the set
-		index: function (elem) {
+		index: function index(elem) {
 
 			// No argument, return index in parent
 			if (!elem) {
@@ -3077,11 +3918,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			elem.jquery ? elem[0] : elem);
 		},
 
-		add: function (selector, context) {
+		add: function add(selector, context) {
 			return this.pushStack(jQuery.uniqueSort(jQuery.merge(this.get(), jQuery(selector, context))));
 		},
 
-		addBack: function (selector) {
+		addBack: function addBack(selector) {
 			return this.add(selector == null ? this.prevObject : this.prevObject.filter(selector));
 		}
 	});
@@ -3092,41 +3933,41 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	}
 
 	jQuery.each({
-		parent: function (elem) {
+		parent: function parent(elem) {
 			var parent = elem.parentNode;
 			return parent && parent.nodeType !== 11 ? parent : null;
 		},
-		parents: function (elem) {
+		parents: function parents(elem) {
 			return dir(elem, "parentNode");
 		},
-		parentsUntil: function (elem, i, until) {
+		parentsUntil: function parentsUntil(elem, i, until) {
 			return dir(elem, "parentNode", until);
 		},
-		next: function (elem) {
+		next: function next(elem) {
 			return sibling(elem, "nextSibling");
 		},
-		prev: function (elem) {
+		prev: function prev(elem) {
 			return sibling(elem, "previousSibling");
 		},
-		nextAll: function (elem) {
+		nextAll: function nextAll(elem) {
 			return dir(elem, "nextSibling");
 		},
-		prevAll: function (elem) {
+		prevAll: function prevAll(elem) {
 			return dir(elem, "previousSibling");
 		},
-		nextUntil: function (elem, i, until) {
+		nextUntil: function nextUntil(elem, i, until) {
 			return dir(elem, "nextSibling", until);
 		},
-		prevUntil: function (elem, i, until) {
+		prevUntil: function prevUntil(elem, i, until) {
 			return dir(elem, "previousSibling", until);
 		},
-		siblings: function (elem) {
-			return siblings((elem.parentNode || {}).firstChild, elem);
+		siblings: function siblings(elem) {
+			return _siblings((elem.parentNode || {}).firstChild, elem);
 		},
-		children: function (elem) {
-			return siblings(elem.firstChild);
+		children: function children(elem) {
+			return _siblings(elem.firstChild);
 		},
-		contents: function (elem) {
+		contents: function contents(elem) {
 			if (nodeName(elem, "iframe")) {
 				return elem.contentDocument;
 			}
@@ -3216,11 +4057,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 
 		// Flag to know if list was already fired
-		fired,
+		_fired,
 
 
 		// Flag to prevent firing
-		locked,
+		_locked,
 
 
 		// Actual callback list
@@ -3236,14 +4077,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 
 		// Fire callbacks
-		fire = function () {
+		fire = function fire() {
 
 			// Enforce single-firing
-			locked = locked || options.once;
+			_locked = _locked || options.once;
 
 			// Execute callbacks for all pending executions,
 			// respecting firingIndex overrides and runtime changes
-			fired = firing = true;
+			_fired = firing = true;
 			for (; queue.length; firingIndex = -1) {
 				memory = queue.shift();
 				while (++firingIndex < list.length) {
@@ -3266,7 +4107,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			firing = false;
 
 			// Clean up if we're done firing for good
-			if (locked) {
+			if (_locked) {
 
 				// Keep an empty list if we have data for future add calls
 				if (memory) {
@@ -3284,7 +4125,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		self = {
 
 			// Add a callback or a collection of callbacks to the list
-			add: function () {
+			add: function add() {
 				if (list) {
 
 					// If we have memory from a past run, we should fire after adding
@@ -3315,7 +4156,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			},
 
 			// Remove a callback from the list
-			remove: function () {
+			remove: function remove() {
 				jQuery.each(arguments, function (_, arg) {
 					var index;
 					while ((index = jQuery.inArray(arg, list, index)) > -1) {
@@ -3332,12 +4173,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 			// Check if a given callback is in the list.
 			// If no argument is given, return whether or not list has callbacks attached.
-			has: function (fn) {
+			has: function has(fn) {
 				return fn ? jQuery.inArray(fn, list) > -1 : list.length > 0;
 			},
 
 			// Remove all callbacks from the list
-			empty: function () {
+			empty: function empty() {
 				if (list) {
 					list = [];
 				}
@@ -3347,32 +4188,32 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			// Disable .fire and .add
 			// Abort any current/pending executions
 			// Clear all callbacks and values
-			disable: function () {
-				locked = queue = [];
+			disable: function disable() {
+				_locked = queue = [];
 				list = memory = "";
 				return this;
 			},
-			disabled: function () {
+			disabled: function disabled() {
 				return !list;
 			},
 
 			// Disable .fire
 			// Also disable .add unless we have memory (since it would have no effect)
 			// Abort any pending executions
-			lock: function () {
-				locked = queue = [];
+			lock: function lock() {
+				_locked = queue = [];
 				if (!memory && !firing) {
 					list = memory = "";
 				}
 				return this;
 			},
-			locked: function () {
-				return !!locked;
+			locked: function locked() {
+				return !!_locked;
 			},
 
 			// Call all callbacks with the given context and arguments
-			fireWith: function (context, args) {
-				if (!locked) {
+			fireWith: function fireWith(context, args) {
+				if (!_locked) {
 					args = args || [];
 					args = [context, args.slice ? args.slice() : args];
 					queue.push(args);
@@ -3384,14 +4225,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			},
 
 			// Call all the callbacks with the given arguments
-			fire: function () {
+			fire: function fire() {
 				self.fireWith(this, arguments);
 				return this;
 			},
 
 			// To know if the callbacks have already been called at least once
-			fired: function () {
-				return !!fired;
+			fired: function fired() {
+				return !!_fired;
 			}
 		};
 
@@ -3440,27 +4281,27 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	jQuery.extend({
 
-		Deferred: function (func) {
+		Deferred: function Deferred(func) {
 			var tuples = [
 
 			// action, add listener, callbacks,
 			// ... .then handlers, argument index, [final state]
 			["notify", "progress", jQuery.Callbacks("memory"), jQuery.Callbacks("memory"), 2], ["resolve", "done", jQuery.Callbacks("once memory"), jQuery.Callbacks("once memory"), 0, "resolved"], ["reject", "fail", jQuery.Callbacks("once memory"), jQuery.Callbacks("once memory"), 1, "rejected"]],
-			    state = "pending",
-			    promise = {
-				state: function () {
-					return state;
+			    _state = "pending",
+			    _promise = {
+				state: function state() {
+					return _state;
 				},
-				always: function () {
+				always: function always() {
 					deferred.done(arguments).fail(arguments);
 					return this;
 				},
-				"catch": function (fn) {
-					return promise.then(null, fn);
+				"catch": function _catch(fn) {
+					return _promise.then(null, fn);
 				},
 
 				// Keep pipe for back-compat
-				pipe: function () /* fnDone, fnFail, fnProgress */{
+				pipe: function pipe() /* fnDone, fnFail, fnProgress */{
 					var fns = arguments;
 
 					return jQuery.Deferred(function (newDefer) {
@@ -3484,13 +4325,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 						fns = null;
 					}).promise();
 				},
-				then: function (onFulfilled, onRejected, onProgress) {
+				then: function then(onFulfilled, onRejected, onProgress) {
 					var maxDepth = 0;
 					function resolve(depth, deferred, handler, special) {
 						return function () {
 							var that = this,
 							    args = arguments,
-							    mightThrow = function () {
+							    mightThrow = function mightThrow() {
 								var returned, then;
 
 								// Support: Promises/A+ section 2.3.3.3.3
@@ -3517,7 +4358,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 								// Support: Promises/A+ section 2.3.4
 								// https://promisesaplus.com/#point-64
 								// Only check objects and functions for thenability
-								typeof returned === "object" || typeof returned === "function") && returned.then;
+								(typeof returned === "undefined" ? "undefined" : _typeof(returned)) === "object" || typeof returned === "function") && returned.then;
 
 								// Handle a returned thenable
 								if (jQuery.isFunction(then)) {
@@ -3612,8 +4453,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 				// Get a promise for this deferred
 				// If obj is provided, the promise aspect is added to the object
-				promise: function (obj) {
-					return obj != null ? jQuery.extend(obj, promise) : promise;
+				promise: function promise(obj) {
+					return obj != null ? jQuery.extend(obj, _promise) : _promise;
 				}
 			},
 			    deferred = {};
@@ -3626,7 +4467,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				// promise.progress = list.add
 				// promise.done = list.add
 				// promise.fail = list.add
-				promise[tuple[1]] = list.add;
+				_promise[tuple[1]] = list.add;
 
 				// Handle state
 				if (stateString) {
@@ -3634,7 +4475,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 						// state = "resolved" (i.e., fulfilled)
 						// state = "rejected"
-						state = stateString;
+						_state = stateString;
 					},
 
 					// rejected_callbacks.disable
@@ -3665,7 +4506,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 
 			// Make the deferred a promise
-			promise.promise(deferred);
+			_promise.promise(deferred);
 
 			// Call given func if any
 			if (func) {
@@ -3677,7 +4518,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		},
 
 		// Deferred helper
-		when: function (singleValue) {
+		when: function when(singleValue) {
 			var
 
 			// count of uncompleted subordinates
@@ -3690,7 +4531,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 			// subordinate fulfillment data
 			resolveContexts = Array(i),
-			    resolveValues = slice.call(arguments),
+			    resolveValues = _slice.call(arguments),
 
 
 			// the master Deferred
@@ -3698,10 +4539,10 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 
 			// subordinate callback factory
-			updateFunc = function (i) {
+			updateFunc = function updateFunc(i) {
 				return function (value) {
 					resolveContexts[i] = this;
-					resolveValues[i] = arguments.length > 1 ? slice.call(arguments) : value;
+					resolveValues[i] = arguments.length > 1 ? _slice.call(arguments) : value;
 					if (! --remaining) {
 						master.resolveWith(resolveContexts, resolveValues);
 					}
@@ -3774,7 +4615,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		readyWait: 1,
 
 		// Handle when the DOM is ready
-		ready: function (wait) {
+		ready: function ready(wait) {
 
 			// Abort if there are pending holds or we're already ready
 			if (wait === true ? --jQuery.readyWait : jQuery.isReady) {
@@ -3822,7 +4663,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	// Multifunctional method to get and set values of a collection
 	// The value/s can optionally be executed if it's a function
-	var access = function (elems, fn, key, value, chainable, emptyGet, raw) {
+	var access = function access(elems, fn, key, value, chainable, emptyGet, raw) {
 		var i = 0,
 		    len = elems.length,
 		    bulk = key == null;
@@ -3852,7 +4693,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					// ...except when executing function values
 				} else {
 					bulk = fn;
-					fn = function (elem, key, value) {
+					fn = function fn(elem, key, value) {
 						return bulk.call(jQuery(elem), value);
 					};
 				}
@@ -3876,7 +4717,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		return len ? fn(elems[0], key) : emptyGet;
 	};
-	var acceptData = function (owner) {
+	var acceptData = function acceptData(owner) {
 
 		// Accepts only:
 		//  - Node
@@ -3895,7 +4736,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	Data.prototype = {
 
-		cache: function (owner) {
+		cache: function cache(owner) {
 
 			// Check if the owner object already has a cache
 			var value = owner[this.expando];
@@ -3928,7 +4769,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 			return value;
 		},
-		set: function (owner, data, value) {
+		set: function set(owner, data, value) {
 			var prop,
 			    cache = this.cache(owner);
 
@@ -3947,13 +4788,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}
 			return cache;
 		},
-		get: function (owner, key) {
+		get: function get(owner, key) {
 			return key === undefined ? this.cache(owner) :
 
 			// Always use camelCase key (gh-2257)
 			owner[this.expando] && owner[this.expando][jQuery.camelCase(key)];
 		},
-		access: function (owner, key, value) {
+		access: function access(owner, key, value) {
 
 			// In cases where either:
 			//
@@ -3983,7 +4824,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			// return the expected data based on which path was taken[*]
 			return value !== undefined ? value : key;
 		},
-		remove: function (owner, key) {
+		remove: function remove(owner, key) {
 			var i,
 			    cache = owner[this.expando];
 
@@ -4028,7 +4869,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				}
 			}
 		},
-		hasData: function (owner) {
+		hasData: function hasData(owner) {
 			var cache = owner[this.expando];
 			return cache !== undefined && !jQuery.isEmptyObject(cache);
 		}
@@ -4099,31 +4940,31 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	}
 
 	jQuery.extend({
-		hasData: function (elem) {
+		hasData: function hasData(elem) {
 			return dataUser.hasData(elem) || dataPriv.hasData(elem);
 		},
 
-		data: function (elem, name, data) {
-			return dataUser.access(elem, name, data);
+		data: function data(elem, name, _data) {
+			return dataUser.access(elem, name, _data);
 		},
 
-		removeData: function (elem, name) {
+		removeData: function removeData(elem, name) {
 			dataUser.remove(elem, name);
 		},
 
 		// TODO: Now that all calls to _data and _removeData have been replaced
 		// with direct calls to dataPriv methods, these can be deprecated.
-		_data: function (elem, name, data) {
+		_data: function _data(elem, name, data) {
 			return dataPriv.access(elem, name, data);
 		},
 
-		_removeData: function (elem, name) {
+		_removeData: function _removeData(elem, name) {
 			dataPriv.remove(elem, name);
 		}
 	});
 
 	jQuery.fn.extend({
-		data: function (key, value) {
+		data: function data(key, value) {
 			var i,
 			    name,
 			    data,
@@ -4157,7 +4998,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}
 
 			// Sets multiple values
-			if (typeof key === "object") {
+			if ((typeof key === "undefined" ? "undefined" : _typeof(key)) === "object") {
 				return this.each(function () {
 					dataUser.set(this, key);
 				});
@@ -4200,7 +5041,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}, null, value, arguments.length > 1, null, true);
 		},
 
-		removeData: function (key) {
+		removeData: function removeData(key) {
 			return this.each(function () {
 				dataUser.remove(this, key);
 			});
@@ -4208,7 +5049,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	});
 
 	jQuery.extend({
-		queue: function (elem, type, data) {
+		queue: function queue(elem, type, data) {
 			var queue;
 
 			if (elem) {
@@ -4227,14 +5068,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}
 		},
 
-		dequeue: function (elem, type) {
+		dequeue: function dequeue(elem, type) {
 			type = type || "fx";
 
 			var queue = jQuery.queue(elem, type),
 			    startLength = queue.length,
 			    fn = queue.shift(),
 			    hooks = jQuery._queueHooks(elem, type),
-			    next = function () {
+			    next = function next() {
 				jQuery.dequeue(elem, type);
 			};
 
@@ -4263,7 +5104,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		},
 
 		// Not public - generate a queueHooks object, or return the current one
-		_queueHooks: function (elem, type) {
+		_queueHooks: function _queueHooks(elem, type) {
 			var key = type + "queueHooks";
 			return dataPriv.get(elem, key) || dataPriv.access(elem, key, {
 				empty: jQuery.Callbacks("once memory").add(function () {
@@ -4274,7 +5115,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	});
 
 	jQuery.fn.extend({
-		queue: function (type, data) {
+		queue: function queue(type, data) {
 			var setter = 2;
 
 			if (typeof type !== "string") {
@@ -4298,24 +5139,24 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				}
 			});
 		},
-		dequeue: function (type) {
+		dequeue: function dequeue(type) {
 			return this.each(function () {
 				jQuery.dequeue(this, type);
 			});
 		},
-		clearQueue: function (type) {
+		clearQueue: function clearQueue(type) {
 			return this.queue(type || "fx", []);
 		},
 
 		// Get a promise resolved when queues of a certain type
 		// are emptied (fx is the type by default)
-		promise: function (type, obj) {
+		promise: function promise(type, obj) {
 			var tmp,
 			    count = 1,
 			    defer = jQuery.Deferred(),
 			    elements = this,
 			    i = this.length,
-			    resolve = function () {
+			    resolve = function resolve() {
 				if (! --count) {
 					defer.resolveWith(elements, [elements]);
 				}
@@ -4344,7 +5185,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	var cssExpand = ["Top", "Right", "Bottom", "Left"];
 
-	var isHiddenWithinTree = function (elem, el) {
+	var isHiddenWithinTree = function isHiddenWithinTree(elem, el) {
 
 		// isHiddenWithinTree might be called from jQuery#filter function;
 		// in that case, element will be second argument
@@ -4360,7 +5201,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		jQuery.contains(elem.ownerDocument, elem) && jQuery.css(elem, "display") === "none";
 	};
 
-	var swap = function (elem, options, callback, args) {
+	var swap = function swap(elem, options, callback, args) {
 		var ret,
 		    name,
 		    old = {};
@@ -4512,13 +5353,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	}
 
 	jQuery.fn.extend({
-		show: function () {
+		show: function show() {
 			return showHide(this, true);
 		},
-		hide: function () {
+		hide: function hide() {
 			return showHide(this);
 		},
-		toggle: function (state) {
+		toggle: function toggle(state) {
 			if (typeof state === "boolean") {
 				return state ? this.show() : this.hide();
 			}
@@ -4734,11 +5575,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		} catch (err) {}
 	}
 
-	function on(elem, types, selector, data, fn, one) {
+	function _on(elem, types, selector, data, fn, one) {
 		var origFn, type;
 
 		// Types can be a map of types/handlers
-		if (typeof types === "object") {
+		if ((typeof types === "undefined" ? "undefined" : _typeof(types)) === "object") {
 
 			// ( types-Object, selector, data )
 			if (typeof selector !== "string") {
@@ -4748,7 +5589,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				selector = undefined;
 			}
 			for (type in types) {
-				on(elem, type, selector, data, types[type], one);
+				_on(elem, type, selector, data, types[type], one);
 			}
 			return elem;
 		}
@@ -4780,7 +5621,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		if (one === 1) {
 			origFn = fn;
-			fn = function (event) {
+			fn = function fn(event) {
 
 				// Can use an empty set, since event contains the info
 				jQuery().off(event);
@@ -4803,7 +5644,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		global: {},
 
-		add: function (elem, types, handler, data, selector) {
+		add: function add(elem, types, handler, data, selector) {
 
 			var handleObjIn,
 			    eventHandle,
@@ -4923,7 +5764,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		},
 
 		// Detach an event or set of events from an element
-		remove: function (elem, types, handler, selector, mappedTypes) {
+		remove: function remove(elem, types, handler, selector, mappedTypes) {
 
 			var j,
 			    origCount,
@@ -4998,7 +5839,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}
 		},
 
-		dispatch: function (nativeEvent) {
+		dispatch: function dispatch(nativeEvent) {
 
 			// Make a writable jQuery.Event from the native event object
 			var event = jQuery.event.fix(nativeEvent);
@@ -5065,14 +5906,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return event.result;
 		},
 
-		handlers: function (event, handlers) {
+		handlers: function handlers(event, _handlers) {
 			var i,
 			    handleObj,
 			    sel,
 			    matchedHandlers,
 			    matchedSelectors,
 			    handlerQueue = [],
-			    delegateCount = handlers.delegateCount,
+			    delegateCount = _handlers.delegateCount,
 			    cur = event.target;
 
 			// Find delegate handlers
@@ -5097,7 +5938,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 						matchedHandlers = [];
 						matchedSelectors = {};
 						for (i = 0; i < delegateCount; i++) {
-							handleObj = handlers[i];
+							handleObj = _handlers[i];
 
 							// Don't conflict with Object.prototype properties (#13203)
 							sel = handleObj.selector + " ";
@@ -5118,14 +5959,14 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 			// Add the remaining (directly-bound) handlers
 			cur = this;
-			if (delegateCount < handlers.length) {
-				handlerQueue.push({ elem: cur, handlers: handlers.slice(delegateCount) });
+			if (delegateCount < _handlers.length) {
+				handlerQueue.push({ elem: cur, handlers: _handlers.slice(delegateCount) });
 			}
 
 			return handlerQueue;
 		},
 
-		addProp: function (name, hook) {
+		addProp: function addProp(name, hook) {
 			Object.defineProperty(jQuery.Event.prototype, name, {
 				enumerable: true,
 				configurable: true,
@@ -5140,7 +5981,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					}
 				},
 
-				set: function (value) {
+				set: function set(value) {
 					Object.defineProperty(this, name, {
 						enumerable: true,
 						configurable: true,
@@ -5151,7 +5992,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 		},
 
-		fix: function (originalEvent) {
+		fix: function fix(originalEvent) {
 			return originalEvent[jQuery.expando] ? originalEvent : new jQuery.Event(originalEvent);
 		},
 
@@ -5164,7 +6005,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			focus: {
 
 				// Fire native event if possible so blur/focus sequence is correct
-				trigger: function () {
+				trigger: function trigger() {
 					if (this !== safeActiveElement() && this.focus) {
 						this.focus();
 						return false;
@@ -5173,7 +6014,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				delegateType: "focusin"
 			},
 			blur: {
-				trigger: function () {
+				trigger: function trigger() {
 					if (this === safeActiveElement() && this.blur) {
 						this.blur();
 						return false;
@@ -5184,7 +6025,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			click: {
 
 				// For checkbox, fire native event so checked state will be right
-				trigger: function () {
+				trigger: function trigger() {
 					if (this.type === "checkbox" && this.click && nodeName(this, "input")) {
 						this.click();
 						return false;
@@ -5192,13 +6033,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				},
 
 				// For cross-browser consistency, don't fire native .click() on links
-				_default: function (event) {
+				_default: function _default(event) {
 					return nodeName(event.target, "a");
 				}
 			},
 
 			beforeunload: {
-				postDispatch: function (event) {
+				postDispatch: function postDispatch(event) {
 
 					// Support: Firefox 20+
 					// Firefox doesn't alert if the returnValue field is not set.
@@ -5271,7 +6112,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		isImmediatePropagationStopped: returnFalse,
 		isSimulated: false,
 
-		preventDefault: function () {
+		preventDefault: function preventDefault() {
 			var e = this.originalEvent;
 
 			this.isDefaultPrevented = returnTrue;
@@ -5280,7 +6121,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				e.preventDefault();
 			}
 		},
-		stopPropagation: function () {
+		stopPropagation: function stopPropagation() {
 			var e = this.originalEvent;
 
 			this.isPropagationStopped = returnTrue;
@@ -5289,7 +6130,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				e.stopPropagation();
 			}
 		},
-		stopImmediatePropagation: function () {
+		stopImmediatePropagation: function stopImmediatePropagation() {
 			var e = this.originalEvent;
 
 			this.isImmediatePropagationStopped = returnTrue;
@@ -5334,7 +6175,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		toElement: true,
 		touches: true,
 
-		which: function (event) {
+		which: function which(event) {
 			var button = event.button;
 
 			// Add which for key events
@@ -5381,7 +6222,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			delegateType: fix,
 			bindType: fix,
 
-			handle: function (event) {
+			handle: function handle(event) {
 				var ret,
 				    target = this,
 				    related = event.relatedTarget,
@@ -5401,13 +6242,13 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	jQuery.fn.extend({
 
-		on: function (types, selector, data, fn) {
-			return on(this, types, selector, data, fn);
+		on: function on(types, selector, data, fn) {
+			return _on(this, types, selector, data, fn);
 		},
-		one: function (types, selector, data, fn) {
-			return on(this, types, selector, data, fn, 1);
+		one: function one(types, selector, data, fn) {
+			return _on(this, types, selector, data, fn, 1);
 		},
-		off: function (types, selector, fn) {
+		off: function off(types, selector, fn) {
 			var handleObj, type;
 			if (types && types.preventDefault && types.handleObj) {
 
@@ -5416,7 +6257,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				jQuery(types.delegateTarget).off(handleObj.namespace ? handleObj.origType + "." + handleObj.namespace : handleObj.origType, handleObj.selector, handleObj.handler);
 				return this;
 			}
-			if (typeof types === "object") {
+			if ((typeof types === "undefined" ? "undefined" : _typeof(types)) === "object") {
 
 				// ( types-object [, selector] )
 				for (type in types) {
@@ -5626,7 +6467,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		return collection;
 	}
 
-	function remove(elem, selector, keepData) {
+	function _remove(elem, selector, keepData) {
 		var node,
 		    nodes = selector ? jQuery.filter(selector, elem) : elem,
 		    i = 0;
@@ -5648,11 +6489,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	}
 
 	jQuery.extend({
-		htmlPrefilter: function (html) {
+		htmlPrefilter: function htmlPrefilter(html) {
 			return html.replace(rxhtmlTag, "<$1></$2>");
 		},
 
-		clone: function (elem, dataAndEvents, deepDataAndEvents) {
+		clone: function clone(elem, dataAndEvents, deepDataAndEvents) {
 			var i,
 			    l,
 			    srcElements,
@@ -5696,7 +6537,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return clone;
 		},
 
-		cleanData: function (elems) {
+		cleanData: function cleanData(elems) {
 			var data,
 			    elem,
 			    type,
@@ -5734,15 +6575,15 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	});
 
 	jQuery.fn.extend({
-		detach: function (selector) {
-			return remove(this, selector, true);
+		detach: function detach(selector) {
+			return _remove(this, selector, true);
 		},
 
-		remove: function (selector) {
-			return remove(this, selector);
+		remove: function remove(selector) {
+			return _remove(this, selector);
 		},
 
-		text: function (value) {
+		text: function text(value) {
 			return access(this, function (value) {
 				return value === undefined ? jQuery.text(this) : this.empty().each(function () {
 					if (this.nodeType === 1 || this.nodeType === 11 || this.nodeType === 9) {
@@ -5752,7 +6593,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}, null, value, arguments.length);
 		},
 
-		append: function () {
+		append: function append() {
 			return domManip(this, arguments, function (elem) {
 				if (this.nodeType === 1 || this.nodeType === 11 || this.nodeType === 9) {
 					var target = manipulationTarget(this, elem);
@@ -5761,7 +6602,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 		},
 
-		prepend: function () {
+		prepend: function prepend() {
 			return domManip(this, arguments, function (elem) {
 				if (this.nodeType === 1 || this.nodeType === 11 || this.nodeType === 9) {
 					var target = manipulationTarget(this, elem);
@@ -5770,7 +6611,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 		},
 
-		before: function () {
+		before: function before() {
 			return domManip(this, arguments, function (elem) {
 				if (this.parentNode) {
 					this.parentNode.insertBefore(elem, this);
@@ -5778,7 +6619,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 		},
 
-		after: function () {
+		after: function after() {
 			return domManip(this, arguments, function (elem) {
 				if (this.parentNode) {
 					this.parentNode.insertBefore(elem, this.nextSibling);
@@ -5786,7 +6627,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 		},
 
-		empty: function () {
+		empty: function empty() {
 			var elem,
 			    i = 0;
 
@@ -5804,7 +6645,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return this;
 		},
 
-		clone: function (dataAndEvents, deepDataAndEvents) {
+		clone: function clone(dataAndEvents, deepDataAndEvents) {
 			dataAndEvents = dataAndEvents == null ? false : dataAndEvents;
 			deepDataAndEvents = deepDataAndEvents == null ? dataAndEvents : deepDataAndEvents;
 
@@ -5813,7 +6654,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 		},
 
-		html: function (value) {
+		html: function html(value) {
 			return access(this, function (value) {
 				var elem = this[0] || {},
 				    i = 0,
@@ -5851,7 +6692,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}, null, value, arguments.length);
 		},
 
-		replaceWith: function () {
+		replaceWith: function replaceWith() {
 			var ignored = [];
 
 			// Make the changes, replacing each non-ignored context element with the new content
@@ -5900,7 +6741,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	var rnumnonpx = new RegExp("^(" + pnum + ")(?!px)[a-z%]+$", "i");
 
-	var getStyles = function (elem) {
+	var getStyles = function getStyles(elem) {
 
 		// Support: IE <=11 only, Firefox <=30 (#15098, #14150)
 		// IE throws on elements created in popups
@@ -5970,19 +6811,19 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		container.appendChild(div);
 
 		jQuery.extend(support, {
-			pixelPosition: function () {
+			pixelPosition: function pixelPosition() {
 				computeStyleTests();
 				return pixelPositionVal;
 			},
-			boxSizingReliable: function () {
+			boxSizingReliable: function boxSizingReliable() {
 				computeStyleTests();
 				return boxSizingReliableVal;
 			},
-			pixelMarginRight: function () {
+			pixelMarginRight: function pixelMarginRight() {
 				computeStyleTests();
 				return pixelMarginRightVal;
 			},
-			reliableMarginLeft: function () {
+			reliableMarginLeft: function reliableMarginLeft() {
 				computeStyleTests();
 				return reliableMarginLeftVal;
 			}
@@ -6048,7 +6889,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		// Define the hook, we'll check on the first run if it's really needed.
 		return {
-			get: function () {
+			get: function get() {
 				if (conditionFn()) {
 
 					// Hook not needed (or it's not possible to use it due
@@ -6201,7 +7042,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		// behavior of getting and setting a style property
 		cssHooks: {
 			opacity: {
-				get: function (elem, computed) {
+				get: function get(elem, computed) {
 					if (computed) {
 
 						// We should always get a number back from opacity
@@ -6236,7 +7077,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		},
 
 		// Get and set the style property on a DOM Node
-		style: function (elem, name, value, extra) {
+		style: function style(elem, name, value, extra) {
 
 			// Don't set styles on text and comment nodes
 			if (!elem || elem.nodeType === 3 || elem.nodeType === 8 || !elem.style) {
@@ -6263,7 +7104,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 			// Check if we're setting a value
 			if (value !== undefined) {
-				type = typeof value;
+				type = typeof value === "undefined" ? "undefined" : _typeof(value);
 
 				// Convert "+=" or "-=" to relative numbers (#7345)
 				if (type === "string" && (ret = rcssNum.exec(value)) && ret[1]) {
@@ -6310,7 +7151,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}
 		},
 
-		css: function (elem, name, extra, styles) {
+		css: function css(elem, name, extra, styles) {
 			var val,
 			    num,
 			    hooks,
@@ -6354,7 +7195,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	jQuery.each(["height", "width"], function (i, name) {
 		jQuery.cssHooks[name] = {
-			get: function (elem, computed, extra) {
+			get: function get(elem, computed, extra) {
 				if (computed) {
 
 					// Certain elements can have dimension info if we invisibly show them
@@ -6373,7 +7214,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				}
 			},
 
-			set: function (elem, value, extra) {
+			set: function set(elem, value, extra) {
 				var matches,
 				    styles = extra && getStyles(elem),
 				    subtract = extra && augmentWidthOrHeight(elem, name, extra, jQuery.css(elem, "boxSizing", false, styles) === "border-box", styles);
@@ -6405,7 +7246,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		border: "Width"
 	}, function (prefix, suffix) {
 		jQuery.cssHooks[prefix + suffix] = {
-			expand: function (value) {
+			expand: function expand(value) {
 				var i = 0,
 				    expanded = {},
 
@@ -6427,7 +7268,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	});
 
 	jQuery.fn.extend({
-		css: function (name, value) {
+		css: function css(name, value) {
 			return access(this, function (elem, name, value) {
 				var styles,
 				    len,
@@ -6457,7 +7298,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	Tween.prototype = {
 		constructor: Tween,
-		init: function (elem, options, prop, end, easing, unit) {
+		init: function init(elem, options, prop, end, easing, unit) {
 			this.elem = elem;
 			this.prop = prop;
 			this.easing = easing || jQuery.easing._default;
@@ -6466,12 +7307,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			this.end = end;
 			this.unit = unit || (jQuery.cssNumber[prop] ? "" : "px");
 		},
-		cur: function () {
+		cur: function cur() {
 			var hooks = Tween.propHooks[this.prop];
 
 			return hooks && hooks.get ? hooks.get(this) : Tween.propHooks._default.get(this);
 		},
-		run: function (percent) {
+		run: function run(percent) {
 			var eased,
 			    hooks = Tween.propHooks[this.prop];
 
@@ -6499,7 +7340,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	Tween.propHooks = {
 		_default: {
-			get: function (tween) {
+			get: function get(tween) {
 				var result;
 
 				// Use a property on the element directly when it is not a DOM element,
@@ -6517,7 +7358,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				// Empty strings, null, undefined and "auto" are converted to 0.
 				return !result || result === "auto" ? 0 : result;
 			},
-			set: function (tween) {
+			set: function set(tween) {
 
 				// Use step hook for back compat.
 				// Use cssHook if its there.
@@ -6536,7 +7377,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	// Support: IE <=9 only
 	// Panic based approach to setting things on disconnected nodes
 	Tween.propHooks.scrollTop = Tween.propHooks.scrollLeft = {
-		set: function (tween) {
+		set: function set(tween) {
 			if (tween.elem.nodeType && tween.elem.parentNode) {
 				tween.elem[tween.prop] = tween.now;
 			}
@@ -6544,10 +7385,10 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	};
 
 	jQuery.easing = {
-		linear: function (p) {
+		linear: function linear(p) {
 			return p;
 		},
-		swing: function (p) {
+		swing: function swing(p) {
 			return 0.5 - Math.cos(p * Math.PI) / 2;
 		},
 		_default: "swing"
@@ -6843,7 +7684,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			// Don't match elem in the :animated selector
 			delete tick.elem;
 		}),
-		    tick = function () {
+		    tick = function tick() {
 			if (stopped) {
 				return false;
 			}
@@ -6890,12 +7731,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			startTime: fxNow || createFxNow(),
 			duration: options.duration,
 			tweens: [],
-			createTween: function (prop, end) {
+			createTween: function createTween(prop, end) {
 				var tween = jQuery.Tween(elem, animation.opts, prop, end, animation.opts.specialEasing[prop] || animation.opts.easing);
 				animation.tweens.push(tween);
 				return tween;
 			},
-			stop: function (gotoEnd) {
+			stop: function stop(gotoEnd) {
 				var index = 0,
 
 
@@ -6962,7 +7803,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}]
 		},
 
-		tweener: function (props, callback) {
+		tweener: function tweener(props, callback) {
 			if (jQuery.isFunction(props)) {
 				callback = props;
 				props = ["*"];
@@ -6983,7 +7824,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		prefilters: [defaultPrefilter],
 
-		prefilter: function (callback, prepend) {
+		prefilter: function prefilter(callback, prepend) {
 			if (prepend) {
 				Animation.prefilters.unshift(callback);
 			} else {
@@ -6993,7 +7834,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	});
 
 	jQuery.speed = function (speed, easing, fn) {
-		var opt = speed && typeof speed === "object" ? jQuery.extend({}, speed) : {
+		var opt = speed && (typeof speed === "undefined" ? "undefined" : _typeof(speed)) === "object" ? jQuery.extend({}, speed) : {
 			complete: fn || !fn && easing || jQuery.isFunction(speed) && speed,
 			duration: speed,
 			easing: fn && easing || easing && !jQuery.isFunction(easing) && easing
@@ -7034,7 +7875,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	};
 
 	jQuery.fn.extend({
-		fadeTo: function (speed, to, easing, callback) {
+		fadeTo: function fadeTo(speed, to, easing, callback) {
 
 			// Show any hidden elements after setting opacity to 0
 			return this.filter(isHiddenWithinTree).css("opacity", 0).show()
@@ -7042,10 +7883,10 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			// Animate to the value specified
 			.end().animate({ opacity: to }, speed, easing, callback);
 		},
-		animate: function (prop, speed, easing, callback) {
+		animate: function animate(prop, speed, easing, callback) {
 			var empty = jQuery.isEmptyObject(prop),
 			    optall = jQuery.speed(speed, easing, callback),
-			    doAnimation = function () {
+			    doAnimation = function doAnimation() {
 
 				// Operate on a copy of prop so per-property easing won't be lost
 				var anim = Animation(this, jQuery.extend({}, prop), optall);
@@ -7059,8 +7900,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 			return empty || optall.queue === false ? this.each(doAnimation) : this.queue(optall.queue, doAnimation);
 		},
-		stop: function (type, clearQueue, gotoEnd) {
-			var stopQueue = function (hooks) {
+		stop: function stop(type, clearQueue, gotoEnd) {
+			var stopQueue = function stopQueue(hooks) {
 				var stop = hooks.stop;
 				delete hooks.stop;
 				stop(gotoEnd);
@@ -7110,7 +7951,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				}
 			});
 		},
-		finish: function (type) {
+		finish: function finish(type) {
 			if (type !== false) {
 				type = type || "fx";
 			}
@@ -7265,11 +8106,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	    attrHandle = jQuery.expr.attrHandle;
 
 	jQuery.fn.extend({
-		attr: function (name, value) {
+		attr: function attr(name, value) {
 			return access(this, jQuery.attr, name, value, arguments.length > 1);
 		},
 
-		removeAttr: function (name) {
+		removeAttr: function removeAttr(name) {
 			return this.each(function () {
 				jQuery.removeAttr(this, name);
 			});
@@ -7277,7 +8118,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	});
 
 	jQuery.extend({
-		attr: function (elem, name, value) {
+		attr: function attr(elem, name, value) {
 			var ret,
 			    hooks,
 			    nType = elem.nodeType;
@@ -7324,7 +8165,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		attrHooks: {
 			type: {
-				set: function (elem, value) {
+				set: function set(elem, value) {
 					if (!support.radioValue && value === "radio" && nodeName(elem, "input")) {
 						var val = elem.value;
 						elem.setAttribute("type", value);
@@ -7337,7 +8178,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			}
 		},
 
-		removeAttr: function (elem, value) {
+		removeAttr: function removeAttr(elem, value) {
 			var name,
 			    i = 0,
 
@@ -7356,7 +8197,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	// Hooks for boolean attributes
 	boolHook = {
-		set: function (elem, value, name) {
+		set: function set(elem, value, name) {
 			if (value === false) {
 
 				// Remove boolean attributes when set to false
@@ -7392,11 +8233,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	    rclickable = /^(?:a|area)$/i;
 
 	jQuery.fn.extend({
-		prop: function (name, value) {
+		prop: function prop(name, value) {
 			return access(this, jQuery.prop, name, value, arguments.length > 1);
 		},
 
-		removeProp: function (name) {
+		removeProp: function removeProp(name) {
 			return this.each(function () {
 				delete this[jQuery.propFix[name] || name];
 			});
@@ -7404,7 +8245,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	});
 
 	jQuery.extend({
-		prop: function (elem, name, value) {
+		prop: function prop(elem, name, value) {
 			var ret,
 			    hooks,
 			    nType = elem.nodeType;
@@ -7438,7 +8279,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		propHooks: {
 			tabIndex: {
-				get: function (elem) {
+				get: function get(elem) {
 
 					// Support: IE <=9 - 11 only
 					// elem.tabIndex doesn't always return the
@@ -7476,7 +8317,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	// since it considers such accessions noop
 	if (!support.optSelected) {
 		jQuery.propHooks.selected = {
-			get: function (elem) {
+			get: function get(elem) {
 
 				/* eslint no-unused-expressions: "off" */
 
@@ -7486,7 +8327,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				}
 				return null;
 			},
-			set: function (elem) {
+			set: function set(elem) {
 
 				/* eslint no-unused-expressions: "off" */
 
@@ -7518,7 +8359,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	}
 
 	jQuery.fn.extend({
-		addClass: function (value) {
+		addClass: function addClass(value) {
 			var classes,
 			    elem,
 			    cur,
@@ -7561,7 +8402,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return this;
 		},
 
-		removeClass: function (value) {
+		removeClass: function removeClass(value) {
 			var classes,
 			    elem,
 			    cur,
@@ -7612,8 +8453,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return this;
 		},
 
-		toggleClass: function (value, stateVal) {
-			var type = typeof value;
+		toggleClass: function toggleClass(value, stateVal) {
+			var type = typeof value === "undefined" ? "undefined" : _typeof(value);
 
 			if (typeof stateVal === "boolean" && type === "string") {
 				return stateVal ? this.addClass(value) : this.removeClass(value);
@@ -7665,7 +8506,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 		},
 
-		hasClass: function (selector) {
+		hasClass: function hasClass(selector) {
 			var className,
 			    elem,
 			    i = 0;
@@ -7684,7 +8525,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	var rreturn = /\r/g;
 
 	jQuery.fn.extend({
-		val: function (value) {
+		val: function val(value) {
 			var hooks,
 			    ret,
 			    isFunction,
@@ -7751,7 +8592,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	jQuery.extend({
 		valHooks: {
 			option: {
-				get: function (elem) {
+				get: function get(elem) {
 
 					var val = jQuery.find.attr(elem, "value");
 					return val != null ? val :
@@ -7764,7 +8605,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				}
 			},
 			select: {
-				get: function (elem) {
+				get: function get(elem) {
 					var value,
 					    option,
 					    i,
@@ -7807,7 +8648,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					return values;
 				},
 
-				set: function (elem, value) {
+				set: function set(elem, value) {
 					var optionSet,
 					    option,
 					    options = elem.options,
@@ -7839,7 +8680,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	// Radios and checkboxes getter/setter
 	jQuery.each(["radio", "checkbox"], function () {
 		jQuery.valHooks[this] = {
-			set: function (elem, value) {
+			set: function set(elem, value) {
 				if (Array.isArray(value)) {
 					return elem.checked = jQuery.inArray(jQuery(elem).val(), value) > -1;
 				}
@@ -7859,7 +8700,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	jQuery.extend(jQuery.event, {
 
-		trigger: function (event, data, elem, onlyHandlers) {
+		trigger: function trigger(event, data, elem, onlyHandlers) {
 
 			var i,
 			    cur,
@@ -7894,7 +8735,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			ontype = type.indexOf(":") < 0 && "on" + type;
 
 			// Caller can pass in a jQuery.Event object, Object, or just an event type string
-			event = event[jQuery.expando] ? event : new jQuery.Event(type, typeof event === "object" && event);
+			event = event[jQuery.expando] ? event : new jQuery.Event(type, (typeof event === "undefined" ? "undefined" : _typeof(event)) === "object" && event);
 
 			// Trigger bitmask: & 1 for native handlers; & 2 for jQuery (always true)
 			event.isTrigger = onlyHandlers ? 2 : 3;
@@ -7991,7 +8832,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		// Piggyback on a donor event to simulate a different one
 		// Used only for `focus(in | out)` events
-		simulate: function (type, elem, event) {
+		simulate: function simulate(type, elem, event) {
 			var e = jQuery.extend(new jQuery.Event(), event, {
 				type: type,
 				isSimulated: true
@@ -8004,12 +8845,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	jQuery.fn.extend({
 
-		trigger: function (type, data) {
+		trigger: function trigger(type, data) {
 			return this.each(function () {
 				jQuery.event.trigger(type, data, this);
 			});
 		},
-		triggerHandler: function (type, data) {
+		triggerHandler: function triggerHandler(type, data) {
 			var elem = this[0];
 			if (elem) {
 				return jQuery.event.trigger(type, data, elem, true);
@@ -8026,7 +8867,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	});
 
 	jQuery.fn.extend({
-		hover: function (fnOver, fnOut) {
+		hover: function hover(fnOver, fnOut) {
 			return this.mouseenter(fnOver).mouseleave(fnOut || fnOver);
 		}
 	});
@@ -8045,12 +8886,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		jQuery.each({ focus: "focusin", blur: "focusout" }, function (orig, fix) {
 
 			// Attach a single capturing handler on the document while someone wants focusin/focusout
-			var handler = function (event) {
+			var handler = function handler(event) {
 				jQuery.event.simulate(fix, event.target, jQuery.event.fix(event));
 			};
 
 			jQuery.event.special[fix] = {
-				setup: function () {
+				setup: function setup() {
 					var doc = this.ownerDocument || this,
 					    attaches = dataPriv.access(doc, fix);
 
@@ -8059,7 +8900,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					}
 					dataPriv.access(doc, fix, (attaches || 0) + 1);
 				},
-				teardown: function () {
+				teardown: function teardown() {
 					var doc = this.ownerDocument || this,
 					    attaches = dataPriv.access(doc, fix) - 1;
 
@@ -8119,7 +8960,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				} else {
 
 					// Item is non-scalar (array or object), encode its numeric index.
-					buildParams(prefix + "[" + (typeof v === "object" && v != null ? i : "") + "]", v, traditional, add);
+					buildParams(prefix + "[" + ((typeof v === "undefined" ? "undefined" : _typeof(v)) === "object" && v != null ? i : "") + "]", v, traditional, add);
 				}
 			});
 		} else if (!traditional && jQuery.type(obj) === "object") {
@@ -8140,7 +8981,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	jQuery.param = function (a, traditional) {
 		var prefix,
 		    s = [],
-		    add = function (key, valueOrFunction) {
+		    add = function add(key, valueOrFunction) {
 
 			// If value is a function, invoke it and use its return value
 			var value = jQuery.isFunction(valueOrFunction) ? valueOrFunction() : valueOrFunction;
@@ -8169,10 +9010,10 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	};
 
 	jQuery.fn.extend({
-		serialize: function () {
+		serialize: function serialize() {
 			return jQuery.param(this.serializeArray());
 		},
-		serializeArray: function () {
+		serializeArray: function serializeArray() {
 			return this.map(function () {
 
 				// Can add propHook for "elements" to filter or add form elements
@@ -8566,7 +9407,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		// Creates a full fledged settings object into target
 		// with both ajaxSettings and settings fields.
 		// If target is omitted, writes into ajaxSettings.
-		ajaxSetup: function (target, settings) {
+		ajaxSetup: function ajaxSetup(target, settings) {
 			return settings ?
 
 			// Building a settings object
@@ -8580,10 +9421,10 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		ajaxTransport: addToPrefiltersOrTransports(transports),
 
 		// Main method
-		ajax: function (url, options) {
+		ajax: function ajax(url, options) {
 
 			// If url is an object, simulate pre-1.5 signature
-			if (typeof url === "object") {
+			if ((typeof url === "undefined" ? "undefined" : _typeof(url)) === "object") {
 				options = url;
 				url = undefined;
 			}
@@ -8645,7 +9486,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 
 			// Status-dependent callbacks
-			statusCode = s.statusCode || {},
+			_statusCode = s.statusCode || {},
 
 
 			// Headers (they are sent all at once)
@@ -8662,7 +9503,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				readyState: 0,
 
 				// Builds headers hashtable if needed
-				getResponseHeader: function (key) {
+				getResponseHeader: function getResponseHeader(key) {
 					var match;
 					if (completed) {
 						if (!responseHeaders) {
@@ -8677,12 +9518,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				},
 
 				// Raw string
-				getAllResponseHeaders: function () {
+				getAllResponseHeaders: function getAllResponseHeaders() {
 					return completed ? responseHeadersString : null;
 				},
 
 				// Caches the header
-				setRequestHeader: function (name, value) {
+				setRequestHeader: function setRequestHeader(name, value) {
 					if (completed == null) {
 						name = requestHeadersNames[name.toLowerCase()] = requestHeadersNames[name.toLowerCase()] || name;
 						requestHeaders[name] = value;
@@ -8691,7 +9532,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				},
 
 				// Overrides response content-type header
-				overrideMimeType: function (type) {
+				overrideMimeType: function overrideMimeType(type) {
 					if (completed == null) {
 						s.mimeType = type;
 					}
@@ -8699,7 +9540,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				},
 
 				// Status-dependent callbacks
-				statusCode: function (map) {
+				statusCode: function statusCode(map) {
 					var code;
 					if (map) {
 						if (completed) {
@@ -8710,7 +9551,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 							// Lazy-add the new callbacks in a way that preserves old ones
 							for (code in map) {
-								statusCode[code] = [statusCode[code], map[code]];
+								_statusCode[code] = [_statusCode[code], map[code]];
 							}
 						}
 					}
@@ -8718,7 +9559,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				},
 
 				// Cancel the request
-				abort: function (statusText) {
+				abort: function abort(statusText) {
 					var finalText = statusText || strAbort;
 					if (transport) {
 						transport.abort(finalText);
@@ -9000,8 +9841,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 				}
 
 				// Status-dependent callbacks
-				jqXHR.statusCode(statusCode);
-				statusCode = undefined;
+				jqXHR.statusCode(_statusCode);
+				_statusCode = undefined;
 
 				if (fireGlobals) {
 					globalEventContext.trigger(isSuccess ? "ajaxSuccess" : "ajaxError", [jqXHR, s, isSuccess ? success : error]);
@@ -9023,11 +9864,11 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return jqXHR;
 		},
 
-		getJSON: function (url, data, callback) {
+		getJSON: function getJSON(url, data, callback) {
 			return jQuery.get(url, data, callback, "json");
 		},
 
-		getScript: function (url, callback) {
+		getScript: function getScript(url, callback) {
 			return jQuery.get(url, undefined, callback, "script");
 		}
 	});
@@ -9068,7 +9909,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	};
 
 	jQuery.fn.extend({
-		wrapAll: function (html) {
+		wrapAll: function wrapAll(html) {
 			var wrap;
 
 			if (this[0]) {
@@ -9097,7 +9938,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			return this;
 		},
 
-		wrapInner: function (html) {
+		wrapInner: function wrapInner(html) {
 			if (jQuery.isFunction(html)) {
 				return this.each(function (i) {
 					jQuery(this).wrapInner(html.call(this, i));
@@ -9116,7 +9957,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 		},
 
-		wrap: function (html) {
+		wrap: function wrap(html) {
 			var isFunction = jQuery.isFunction(html);
 
 			return this.each(function (i) {
@@ -9124,7 +9965,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			});
 		},
 
-		unwrap: function (selector) {
+		unwrap: function unwrap(selector) {
 			this.parent(selector).not("body").each(function () {
 				jQuery(this).replaceWith(this.childNodes);
 			});
@@ -9160,12 +10001,12 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	support.ajax = xhrSupported = !!xhrSupported;
 
 	jQuery.ajaxTransport(function (options) {
-		var callback, errorCallback;
+		var _callback, errorCallback;
 
 		// Cross domain only allowed if supported through XMLHttpRequest
 		if (support.cors || xhrSupported && !options.crossDomain) {
 			return {
-				send: function (headers, complete) {
+				send: function send(headers, complete) {
 					var i,
 					    xhr = options.xhr();
 
@@ -9198,10 +10039,10 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					}
 
 					// Callback
-					callback = function (type) {
+					_callback = function callback(type) {
 						return function () {
-							if (callback) {
-								callback = errorCallback = xhr.onload = xhr.onerror = xhr.onabort = xhr.onreadystatechange = null;
+							if (_callback) {
+								_callback = errorCallback = xhr.onload = xhr.onerror = xhr.onabort = xhr.onreadystatechange = null;
 
 								if (type === "abort") {
 									xhr.abort();
@@ -9231,8 +10072,8 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					};
 
 					// Listen to events
-					xhr.onload = callback();
-					errorCallback = xhr.onerror = callback("error");
+					xhr.onload = _callback();
+					errorCallback = xhr.onerror = _callback("error");
 
 					// Support: IE 9 only
 					// Use onreadystatechange to replace onabort
@@ -9250,7 +10091,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 								// Also, save errorCallback to a variable
 								// as xhr.onerror cannot be accessed
 								window.setTimeout(function () {
-									if (callback) {
+									if (_callback) {
 										errorCallback();
 									}
 								});
@@ -9259,7 +10100,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					}
 
 					// Create the abort callback
-					callback = callback("abort");
+					_callback = _callback("abort");
 
 					try {
 
@@ -9268,15 +10109,15 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					} catch (e) {
 
 						// #14683: Only rethrow if this hasn't been notified as an error yet
-						if (callback) {
+						if (_callback) {
 							throw e;
 						}
 					}
 				},
 
-				abort: function () {
-					if (callback) {
-						callback();
+				abort: function abort() {
+					if (_callback) {
+						_callback();
 					}
 				}
 			};
@@ -9299,7 +10140,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			script: /\b(?:java|ecma)script\b/
 		},
 		converters: {
-			"text script": function (text) {
+			"text script": function textScript(text) {
 				jQuery.globalEval(text);
 				return text;
 			}
@@ -9321,15 +10162,15 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 		// This transport only deals with cross domain requests
 		if (s.crossDomain) {
-			var script, callback;
+			var script, _callback2;
 			return {
-				send: function (_, complete) {
+				send: function send(_, complete) {
 					script = jQuery("<script>").prop({
 						charset: s.scriptCharset,
 						src: s.url
-					}).on("load error", callback = function (evt) {
+					}).on("load error", _callback2 = function callback(evt) {
 						script.remove();
-						callback = null;
+						_callback2 = null;
 						if (evt) {
 							complete(evt.type === "error" ? 404 : 200, evt.type);
 						}
@@ -9338,9 +10179,9 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 					// Use native DOM manipulation to avoid our domManip AJAX trickery
 					document.head.appendChild(script[0]);
 				},
-				abort: function () {
-					if (callback) {
-						callback();
+				abort: function abort() {
+					if (_callback2) {
+						_callback2();
 					}
 				}
 			};
@@ -9353,7 +10194,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	// Default jsonp settings
 	jQuery.ajaxSetup({
 		jsonp: "callback",
-		jsonpCallback: function () {
+		jsonpCallback: function jsonpCallback() {
 			var callback = oldCallbacks.pop() || jQuery.expando + "_" + nonce++;
 			this[callback] = true;
 			return callback;
@@ -9517,7 +10358,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			params = undefined;
 
 			// Otherwise, build a param string
-		} else if (params && typeof params === "object") {
+		} else if (params && (typeof params === "undefined" ? "undefined" : _typeof(params)) === "object") {
 			type = "POST";
 		}
 
@@ -9573,7 +10414,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	};
 
 	jQuery.offset = {
-		setOffset: function (elem, options, i) {
+		setOffset: function setOffset(elem, options, i) {
 			var curPosition,
 			    curLeft,
 			    curCSSTop,
@@ -9628,7 +10469,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 	};
 
 	jQuery.fn.extend({
-		offset: function (options) {
+		offset: function offset(options) {
 
 			// Preserve chaining for setter
 			if (arguments.length) {
@@ -9667,7 +10508,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 			};
 		},
 
-		position: function () {
+		position: function position() {
 			if (!this[0]) {
 				return;
 			}
@@ -9718,7 +10559,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 		// and might be considered as more preferable results.
 		//
 		// This logic, however, is not guaranteed and can change at any point in the future
-		offsetParent: function () {
+		offsetParent: function offsetParent() {
 			return this.map(function () {
 				var offsetParent = this.offsetParent;
 
@@ -9817,17 +10658,17 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	jQuery.fn.extend({
 
-		bind: function (types, data, fn) {
+		bind: function bind(types, data, fn) {
 			return this.on(types, null, data, fn);
 		},
-		unbind: function (types, fn) {
+		unbind: function unbind(types, fn) {
 			return this.off(types, null, fn);
 		},
 
-		delegate: function (selector, types, data, fn) {
+		delegate: function delegate(selector, types, data, fn) {
 			return this.on(types, selector, data, fn);
 		},
-		undelegate: function (selector, types, fn) {
+		undelegate: function undelegate(selector, types, fn) {
 
 			// ( namespace ) or ( selector, types [, fn] )
 			return arguments.length === 1 ? this.off(selector, "**") : this.off(types, selector || "**", fn);
@@ -9895,389 +10736,2210 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
 
 	return jQuery;
 });
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(194)(module)))
 
 /***/ }),
-/* 1 */
+
+/***/ 86:
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__FontDetector__ = __webpack_require__(4);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__actions__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__FontDetector__ = __webpack_require__(197);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__actions__ = __webpack_require__(21);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return FontChanger; });
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 
 
-class FontChanger {
 
-  constructor(elements, { available_fonts, styleList, settings }) {
-    this.fontList = available_fonts;
+var FontChanger = function () {
+  function FontChanger(elements, _ref) {
+    var availableFonts = _ref.availableFonts,
+        styleList = _ref.styleList,
+        settings = _ref.settings;
+
+    _classCallCheck(this, FontChanger);
+
+    this.fontList = availableFonts;
     this.styleList = styleList;
     this.settings = settings;
 
     this.changeElements(elements);
   }
 
-  changeElements(elements) {
-    this.fontIdx = 0;
-    this.stateStack = [];
-    this.elements = elements;
-    this.addStateToStack();
-  }
-  /**
-   * Changes the font of the elements
-   * Currently, it wraps through the elements, maybe we should stop at the end instead? @todo 
-   * @param {Integer|String} x How mnay fonts you want to shift by
-   * @param {Bool} abs if true, x will be what the value should be changed to  
-   */
-  changeFontFamily(x, abs = false) {
-    let newFont, newFontIdx;
-    if (abs) {
-      newFont = x;
-      newFontIdx = this.fontList.indexOf(x);
-      if (newFontIdx == -1) {
-        console.error("Font in stack not found in font list: " + newFont);
-      }
-    } else {
-      console.log(`x: ${x}, fontIdx: ${this.fontIdx}, len: ${this.fontList.length}`);
-      newFontIdx = (x + this.fontIdx) % this.fontList.length;
-      if (newFontIdx < 0) newFontIdx = this.fontList.length + newFontIdx;
-      newFont = this.fontList[newFontIdx];
+  _createClass(FontChanger, [{
+    key: 'changeElements',
+    value: function changeElements(elements) {
+      this.fontIdx = 0;
+      this.stateStack = [];
+      this.elements = elements;
+      this.addStateToStack();
     }
+    /**
+     * Changes the font of the elements
+     * Currently, it wraps through the elements, maybe we should stop at the end instead? @todo 
+     * @param {Integer|String} x How mnay fonts you want to shift by
+     * @param {Bool} abs if true, x will be what the value should be changed to  
+     */
 
-    this.elements.css('font-family', newFont);
-    this.fontIdx = newFontIdx;
+  }, {
+    key: 'changeFontFamily',
+    value: function changeFontFamily(x) {
+      var abs = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
 
-    return true;
-  }
-
-  /**
-   * Changes the font size of the elements
-   * @param {Number} x Font size change in px
-   * @param {Bool} abs if true, x is the absolute value
-   */
-  changeSize(x, abs = false) {
-    let newFontSize;
-
-    if (abs) {
-      newFontSize = x;
-    } else {
-      let currentFontsize = this.elements.css('font-size');
-      let reg = /\d+.?(?:\d+)?/; // regex for extracting the px size value;
-      let matched = reg.exec(currentFontsize);
-
-      if (!matched) {
-        console.error('No size associated with fontsize: ' + currentFontsize);
-        return false;
-      }
-      newFontSize = Number(matched) + x + 'px';
-    }
-    this.elements.css('font-size', newFontSize);
-    return true;
-  }
-  /**
-   * 
-   * @param {Number} x the delta or the absolute value of the new font weight
-   * @param {Bool} abs if true the new weight will be x
-   */
-  changeWeight(x, abs) {
-    let newFontWeight;
-
-    if (abs) {
-      newFontWeight = x;
-    } else {
-      let currentFontWeight = this.elements.css('font-weight');
-      let val = Number(currentFontWeight);
-      newFontWeight = val + x;
-    }
-
-    this.elements.css('font-weight', newFontWeight);
-    return true;
-  }
-
-  changeStyle(x, abs) {
-    let newStyle;
-
-    if (abs) {
-      if (!x in this.styleList) {
-        console.error("Trying to change style to something not in style list: " + x);
-        return false;
-      }
-      newStyle = x;
-    } else {
-      let currStyle = this.elements.css('font-style');
-      let currIdx = this.styleList.indexOf(currStyle);
-
-      if (currIdx == -1) {
-        console.error("Trying to change style to something not in style list: " + currStyle);
-        return false;
-      }
-      newStyle = this.styleList[(currIdx + x) % this.styleList.length];
-    }
-    this.elements.css('font-style', newStyle);
-    return true;
-  }
-
-  changeSettings(settings) {
-    this.settings = settings;
-  }
-
-  /**
-   * Get's the state of the elements
-   */
-  getState() {
-    return {
-      'fontFamily': this.elements.css('font-family'),
-      'fontIdx': this.fontIdx,
-      'fontSize': this.elements.css('font-size'),
-      'fontWeight': this.elements.css('font-weight'),
-      'fontStyle': this.elements.css('font-style')
-    };
-  }
-
-  addStateToStack() {
-    let currState = this.getState();
-    this.stateStack.push(currState);
-  }
-
-  action(ac, x) {
-    console.log("action: " + ac);
-    let set = this.settings;
-
-    switch (ac) {
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["a" /* incSize */]:
-        this.changeSize(set.sizeStep);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["b" /* incSizeBig */]:
-        this.changeSize(set.sizeStep * set.sizeBigMult);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["c" /* decSize */]:
-        this.changeSize(-set.sizeStep);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["d" /* decSizeBig */]:
-        this.changeSize(-set.sizeStep * set.sizeBigMult);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["e" /* incFontWeight */]:
-        this.changeWeight(set.weightStep);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["f" /* incFontWeightBig */]:
-        this.changeWeight(set.weightStep * set.weightBigMult);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["g" /* decFontWeight */]:
-        this.changeWeight(-set.weightStep);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["h" /* decFontWeightBig */]:
-        this.changeWeight(-set.weightStep * set.weightBigMult);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["i" /* nextFont */]:
-        this.changeFontFamily(set.fontStep);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["j" /* nextFontBig */]:
-        this.changeFontFamily(set.fontStep * set.fontBigMult);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["k" /* prevFont */]:
-        this.changeFontFamily(-set.fontStep);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["l" /* prevFontBig */]:
-        this.changeFontFamily(-set.fontStep * set.fontBigMult);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["p" /* changeFont */]:
-        this.changeFontFamily(x, true);break;
-      case __WEBPACK_IMPORTED_MODULE_1__actions__["m" /* changeFontStyle */]:
-        this.changeStyle(1);break;
-      default:
-        console.error(`Action ${ac} not recognized`);
-    }
-
-    this.addStateToStack();
-  }
-
-}
-/* harmony export (immutable) */ __webpack_exports__["a"] = FontChanger;
-
-
-/***/ }),
-/* 2 */,
-/* 3 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* WEBPACK VAR INJECTION */(function($) {Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__lib_FontChanger__ = __webpack_require__(1);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__lib_defaults__ = __webpack_require__(7);
-
-
-
-console.log(__WEBPACK_IMPORTED_MODULE_0__lib_FontChanger__["a" /* default */]);
-
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  console.log(request);
-  sendResponse("success");
-});
-
-initiate(__WEBPACK_IMPORTED_MODULE_1__lib_defaults__["a" /* keyBindings */]); // for debugging;
-
-function initiate(keyBindings) {
-  let fontChanger = new __WEBPACK_IMPORTED_MODULE_0__lib_FontChanger__["a" /* default */]($('.name'), {
-    available_fonts: ['helvetica', 'Bree', 'lucida'],
-    styleList: ['normal', 'italic', 'oblique'],
-    settings: {
-      sizeStep: 3,
-      sizeBigMult: 10,
-      weightStep: 3,
-      weightBigMult: 10,
-      fontStep: 1,
-      fontBigMult: 1
-    }
-  });
-
-  $(window).keypress(handleKeyPress.bind({
-    fontChanger,
-    keyBindings
-  }));
-}
-
-function handleKeyPress({ altKey, ctrlKey, metaKey, key }) {
-  let action = this.keyBindings[key];
-
-  this.fontChanger.action(action);
-}
-/* WEBPACK VAR INJECTION */}.call(__webpack_exports__, __webpack_require__(0)))
-
-/***/ }),
-/* 4 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/**
- * JavaScript code to detect available availability of a
- * particular font in a browser using JavaScript and CSS.
- *
- * Author : Lalit Patel
- * Website: http://www.lalit.org/lab/javascript-css-font-detect/
- * License: Apache Software License 2.0
- *          http://www.apache.org/licenses/LICENSE-2.0
- * Version: 0.15 (21 Sep 2009)
- *          Changed comparision font to default from sans-default-default,
- *          as in FF3.0 font of child element didn't fallback
- *          to parent element if the font is missing.
- * Version: 0.2 (04 Mar 2012)
- *          Comparing font against all the 3 generic font families ie,
- *          'monospace', 'sans-serif' and 'sans'. If it doesn't match all 3
- *          then that font is 100% not available in the system
- * Version: 0.3 (24 Mar 2012)
- *          Replaced sans with serif in the list of baseFonts
- */
-
-/**
- * Usage: d = new Detector();
- *        d.detect('font name');
- */
-let Detector = function () {
-    // a font will be compared against all the three default fonts.
-    // and if it doesn't match all 3 then that font is not available.
-    let baseFonts = ['monospace', 'sans-serif', 'serif'];
-
-    //we use m or w because these two characters take up the maximum width.
-    // And we use a LLi so that the same matching fonts can get separated
-    let testString = "mmmmmmmmmmlli";
-
-    //we test using 72px font size, we may use any size. I guess larger the better.
-    let testSize = '72px';
-
-    let h = document.getElementsByTagName("body")[0];
-
-    // create a SPAN in the document to get the width of the text we use to test
-    let s = document.createElement("span");
-    s.style.fontSize = testSize;
-    s.innerHTML = testString;
-    let defaultWidth = {};
-    let defaultHeight = {};
-    for (let index in baseFonts) {
-        //get the default width for the three base fonts
-        s.style.fontFamily = baseFonts[index];
-        h.appendChild(s);
-        defaultWidth[baseFonts[index]] = s.offsetWidth; //width for the default font
-        defaultHeight[baseFonts[index]] = s.offsetHeight; //height for the defualt font
-        h.removeChild(s);
-    }
-
-    function detect(font) {
-        let detected = false;
-        for (let index in baseFonts) {
-            s.style.fontFamily = font + ',' + baseFonts[index]; // name of the font along with the base font for fallback.
-            h.appendChild(s);
-            let matched = s.offsetWidth != defaultWidth[baseFonts[index]] || s.offsetHeight != defaultHeight[baseFonts[index]];
-            h.removeChild(s);
-            detected = detected || matched;
+      var newFont = void 0,
+          newFontIdx = void 0;
+      if (abs) {
+        newFont = x;
+        newFontIdx = this.fontList.indexOf(x);
+        if (newFontIdx == -1) {
+          console.error("Font in stack not found in font list: " + newFont);
         }
-        return detected;
+      } else {
+        console.log('x: ' + x + ', fontIdx: ' + this.fontIdx + ', len: ' + this.fontList.length);
+        newFontIdx = (x + this.fontIdx) % this.fontList.length;
+        if (newFontIdx < 0) newFontIdx = this.fontList.length + newFontIdx;
+        newFont = this.fontList[newFontIdx];
+      }
+
+      this.elements.css('font-family', newFont);
+      this.fontIdx = newFontIdx;
+
+      return true;
     }
 
-    this.detect = detect;
-};
+    /**
+     * Changes the font size of the elements
+     * @param {Number} x Font size change in px
+     * @param {Bool} abs if true, x is the absolute value
+     */
 
-/* unused harmony default export */ var _unused_webpack_default_export = (new Detector());
+  }, {
+    key: 'changeSize',
+    value: function changeSize(x) {
+      var abs = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
+      var newFontSize = void 0;
+
+      if (abs) {
+        newFontSize = x;
+      } else {
+        var currentFontsize = this.elements.css('font-size');
+        console.log(currentFontsize);
+        var reg = /(.+)px/; // regex for extracting the px size value;
+        var matched = reg.exec(currentFontsize);
+
+        if (!matched) {
+          console.error('No size associated with fontsize: ' + currentFontsize);
+          return false;
+        }
+        newFontSize = Number(matched[1]) + x + 'px';
+      }
+      console.log(newFontSize);
+      this.elements.css('font-size', newFontSize);
+      return true;
+    }
+    /**
+     * 
+     * @param {Number} x the delta or the absolute value of the new font weight
+     * @param {Bool} abs if true the new weight will be x
+     */
+
+  }, {
+    key: 'changeWeight',
+    value: function changeWeight(x, abs) {
+      var newFontWeight = void 0;
+
+      if (abs) {
+        newFontWeight = x;
+      } else {
+        var currentFontWeight = this.elements.css('font-weight');
+        var val = Number(currentFontWeight);
+        newFontWeight = val + x;
+      }
+
+      this.elements.css('font-weight', newFontWeight);
+      return true;
+    }
+  }, {
+    key: 'changeStyle',
+    value: function changeStyle(x, abs) {
+      var newStyle = void 0;
+
+      if (abs) {
+        if (!x in this.styleList) {
+          console.error("Trying to change style to something not in style list: " + x);
+          return false;
+        }
+        newStyle = x;
+      } else {
+        var currStyle = this.elements.css('font-style');
+        var currIdx = this.styleList.indexOf(currStyle);
+
+        if (currIdx == -1) {
+          console.error("Trying to change style to something not in style list: " + currStyle);
+          return false;
+        }
+        newStyle = this.styleList[(currIdx + x) % this.styleList.length];
+      }
+      this.elements.css('font-style', newStyle);
+      return true;
+    }
+  }, {
+    key: 'changeSettings',
+    value: function changeSettings(settings) {
+      this.settings = settings;
+    }
+
+    /**
+     * Get's the state of the elements
+     */
+
+  }, {
+    key: 'getState',
+    value: function getState() {
+      return {
+        'fontFamily': this.elements.css('font-family'),
+        'fontIdx': this.fontIdx,
+        'fontSize': this.elements.css('font-size'),
+        'fontWeight': this.elements.css('font-weight'),
+        'fontStyle': this.elements.css('font-style')
+      };
+    }
+  }, {
+    key: 'addStateToStack',
+    value: function addStateToStack() {
+      var currState = this.getState();
+      this.stateStack.push(currState);
+    }
+  }, {
+    key: 'action',
+    value: function action(ac, x) {
+      console.log("action: " + ac);
+      var set = this.settings;
+
+      switch (ac) {
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["b" /* incSize */]:
+          this.changeSize(set.sizeStep);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["c" /* incSizeBig */]:
+          this.changeSize(set.sizeStep * set.sizeBigMult);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["d" /* decSize */]:
+          this.changeSize(-set.sizeStep);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["e" /* decSizeBig */]:
+          this.changeSize(-set.sizeStep * set.sizeBigMult);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["f" /* incFontWeight */]:
+          this.changeWeight(set.weightStep);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["g" /* incFontWeightBig */]:
+          this.changeWeight(set.weightStep * set.weightBigMult);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["h" /* decFontWeight */]:
+          this.changeWeight(-set.weightStep);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["i" /* decFontWeightBig */]:
+          this.changeWeight(-set.weightStep * set.weightBigMult);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["j" /* nextFont */]:
+          this.changeFontFamily(set.fontStep);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["k" /* nextFontBig */]:
+          this.changeFontFamily(set.fontStep * set.fontBigMult);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["l" /* prevFont */]:
+          this.changeFontFamily(-set.fontStep);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["m" /* prevFontBig */]:
+          this.changeFontFamily(-set.fontStep * set.fontBigMult);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["q" /* changeFont */]:
+          this.changeFontFamily(x, true);break;
+        case __WEBPACK_IMPORTED_MODULE_1__actions__["n" /* changeFontStyle */]:
+          this.changeStyle(1);break;
+        default:
+          console.error('Action ' + ac + ' not recognized');
+      }
+
+      this.addStateToStack();
+    }
+  }]);
+
+  return FontChanger;
+}();
+
+
 
 /***/ }),
-/* 5 */,
-/* 6 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
-"use strict";
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return incSize; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return incSizeBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return decSize; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return decSizeBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return incFontWeight; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return incFontWeightBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return decFontWeight; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return decFontWeightBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return nextFont; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "j", function() { return nextFontBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "k", function() { return prevFont; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "l", function() { return prevFontBig; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "p", function() { return changeFont; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "m", function() { return changeFontStyle; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "n", function() { return search; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "o", function() { return undo; });
-let incSize = 'incSize';
-let incSizeBig = 'incSizeBig';
-let decSize = 'decSize';
-let decSizeBig = 'decSizeBig';
-let incFontWeight = 'incFontWeight';
-let incFontWeightBig = 'incFontWeightBig';
-let decFontWeight = 'decFontWeight';
-let decFontWeightBig = 'decFontWeightBig';
-let nextFont = 'nextFont';
-let nextFontBig = 'nextFontBig';
-let prevFont = 'prevFont';
-let prevFontBig = 'prevFontBig';
-let changeFont = 'changefont';
-let changeFontStyle = 'changeFontStyle';
-let search = 'search';
-let undo = 'undo';
+/***/ 87:
+/***/ (function(module, exports, __webpack_require__) {
+
+// style-loader: Adds some css to the DOM by adding a <style> tag
+
+// load the styles
+var content = __webpack_require__(200);
+if(typeof content === 'string') content = [[module.i, content, '']];
+// Prepare cssTransformation
+var transform;
+
+var options = {}
+options.transform = transform
+// add the styles to the DOM
+var update = __webpack_require__(201)(content, options);
+if(content.locals) module.exports = content.locals;
+// Hot Module Replacement
+if(false) {
+	// When the styles change, update the <style> tags
+	if(!content.locals) {
+		module.hot.accept("!!../../node_modules/css-loader/index.js!../../node_modules/sass-loader/lib/loader.js!./content.scss", function() {
+			var newContent = require("!!../../node_modules/css-loader/index.js!../../node_modules/sass-loader/lib/loader.js!./content.scss");
+			if(typeof newContent === 'string') newContent = [[module.id, newContent, '']];
+			update(newContent);
+		});
+	}
+	// When the module is disposed, remove the <style> tags
+	module.hot.dispose(function() { update(); });
+}
 
 /***/ }),
-/* 7 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+/***/ 88:
+/***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__actions__ = __webpack_require__(6);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return keyBindings; });
-/* unused harmony export activated */
-/* unused harmony export available_fonts */
-/* unused harmony export styleList */
 
 
-let keyBindings = {
-  w: __WEBPACK_IMPORTED_MODULE_0__actions__["a" /* incSize */],
-  W: __WEBPACK_IMPORTED_MODULE_0__actions__["b" /* incSizeBig */],
-  s: __WEBPACK_IMPORTED_MODULE_0__actions__["c" /* decSize */],
-  S: __WEBPACK_IMPORTED_MODULE_0__actions__["d" /* decSizeBig */],
-  r: __WEBPACK_IMPORTED_MODULE_0__actions__["e" /* incFontWeight */],
-  R: __WEBPACK_IMPORTED_MODULE_0__actions__["f" /* incFontWeightBig */],
-  f: __WEBPACK_IMPORTED_MODULE_0__actions__["g" /* decFontWeight */],
-  F: __WEBPACK_IMPORTED_MODULE_0__actions__["h" /* decFontWeightBig */],
-  d: __WEBPACK_IMPORTED_MODULE_0__actions__["i" /* nextFont */],
-  D: __WEBPACK_IMPORTED_MODULE_0__actions__["j" /* nextFontBig */],
-  a: __WEBPACK_IMPORTED_MODULE_0__actions__["k" /* prevFont */],
-  A: __WEBPACK_IMPORTED_MODULE_0__actions__["l" /* prevFontBig */],
-  q: __WEBPACK_IMPORTED_MODULE_0__actions__["m" /* changeFontStyle */],
-  t: __WEBPACK_IMPORTED_MODULE_0__actions__["n" /* search */],
-  u: __WEBPACK_IMPORTED_MODULE_0__actions__["o" /* undo */]
+exports.byteLength = byteLength;
+exports.toByteArray = toByteArray;
+exports.fromByteArray = fromByteArray;
+
+var lookup = [];
+var revLookup = [];
+var Arr = typeof Uint8Array !== 'undefined' ? Uint8Array : Array;
+
+var code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+for (var i = 0, len = code.length; i < len; ++i) {
+  lookup[i] = code[i];
+  revLookup[code.charCodeAt(i)] = i;
+}
+
+revLookup['-'.charCodeAt(0)] = 62;
+revLookup['_'.charCodeAt(0)] = 63;
+
+function placeHoldersCount(b64) {
+  var len = b64.length;
+  if (len % 4 > 0) {
+    throw new Error('Invalid string. Length must be a multiple of 4');
+  }
+
+  // the number of equal signs (place holders)
+  // if there are two placeholders, than the two characters before it
+  // represent one byte
+  // if there is only one, then the three characters before it represent 2 bytes
+  // this is just a cheap hack to not do indexOf twice
+  return b64[len - 2] === '=' ? 2 : b64[len - 1] === '=' ? 1 : 0;
+}
+
+function byteLength(b64) {
+  // base64 is 4/3 + up to two characters of the original data
+  return b64.length * 3 / 4 - placeHoldersCount(b64);
+}
+
+function toByteArray(b64) {
+  var i, j, l, tmp, placeHolders, arr;
+  var len = b64.length;
+  placeHolders = placeHoldersCount(b64);
+
+  arr = new Arr(len * 3 / 4 - placeHolders);
+
+  // if there are placeholders, only get up to the last complete 4 chars
+  l = placeHolders > 0 ? len - 4 : len;
+
+  var L = 0;
+
+  for (i = 0, j = 0; i < l; i += 4, j += 3) {
+    tmp = revLookup[b64.charCodeAt(i)] << 18 | revLookup[b64.charCodeAt(i + 1)] << 12 | revLookup[b64.charCodeAt(i + 2)] << 6 | revLookup[b64.charCodeAt(i + 3)];
+    arr[L++] = tmp >> 16 & 0xFF;
+    arr[L++] = tmp >> 8 & 0xFF;
+    arr[L++] = tmp & 0xFF;
+  }
+
+  if (placeHolders === 2) {
+    tmp = revLookup[b64.charCodeAt(i)] << 2 | revLookup[b64.charCodeAt(i + 1)] >> 4;
+    arr[L++] = tmp & 0xFF;
+  } else if (placeHolders === 1) {
+    tmp = revLookup[b64.charCodeAt(i)] << 10 | revLookup[b64.charCodeAt(i + 1)] << 4 | revLookup[b64.charCodeAt(i + 2)] >> 2;
+    arr[L++] = tmp >> 8 & 0xFF;
+    arr[L++] = tmp & 0xFF;
+  }
+
+  return arr;
+}
+
+function tripletToBase64(num) {
+  return lookup[num >> 18 & 0x3F] + lookup[num >> 12 & 0x3F] + lookup[num >> 6 & 0x3F] + lookup[num & 0x3F];
+}
+
+function encodeChunk(uint8, start, end) {
+  var tmp;
+  var output = [];
+  for (var i = start; i < end; i += 3) {
+    tmp = (uint8[i] << 16) + (uint8[i + 1] << 8) + uint8[i + 2];
+    output.push(tripletToBase64(tmp));
+  }
+  return output.join('');
+}
+
+function fromByteArray(uint8) {
+  var tmp;
+  var len = uint8.length;
+  var extraBytes = len % 3; // if we have 1 byte left, pad 2 bytes
+  var output = '';
+  var parts = [];
+  var maxChunkLength = 16383; // must be multiple of 3
+
+  // go through the array every three bytes, we'll deal with trailing stuff later
+  for (var i = 0, len2 = len - extraBytes; i < len2; i += maxChunkLength) {
+    parts.push(encodeChunk(uint8, i, i + maxChunkLength > len2 ? len2 : i + maxChunkLength));
+  }
+
+  // pad the end with zeros, but make sure to not forget the extra bytes
+  if (extraBytes === 1) {
+    tmp = uint8[len - 1];
+    output += lookup[tmp >> 2];
+    output += lookup[tmp << 4 & 0x3F];
+    output += '==';
+  } else if (extraBytes === 2) {
+    tmp = (uint8[len - 2] << 8) + uint8[len - 1];
+    output += lookup[tmp >> 10];
+    output += lookup[tmp >> 4 & 0x3F];
+    output += lookup[tmp << 2 & 0x3F];
+    output += '=';
+  }
+
+  parts.push(output);
+
+  return parts.join('');
+}
+
+/***/ }),
+
+/***/ 89:
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+/* WEBPACK VAR INJECTION */(function(global) {/*!
+ * The buffer module from node.js, for the browser.
+ *
+ * @author   Feross Aboukhadijeh <feross@feross.org> <http://feross.org>
+ * @license  MIT
+ */
+/* eslint-disable no-proto */
+
+
+
+var base64 = __webpack_require__(88);
+var ieee754 = __webpack_require__(105);
+var isArray = __webpack_require__(106);
+
+exports.Buffer = Buffer;
+exports.SlowBuffer = SlowBuffer;
+exports.INSPECT_MAX_BYTES = 50;
+
+/**
+ * If `Buffer.TYPED_ARRAY_SUPPORT`:
+ *   === true    Use Uint8Array implementation (fastest)
+ *   === false   Use Object implementation (most compatible, even IE6)
+ *
+ * Browsers that support typed arrays are IE 10+, Firefox 4+, Chrome 7+, Safari 5.1+,
+ * Opera 11.6+, iOS 4.2+.
+ *
+ * Due to various browser bugs, sometimes the Object implementation will be used even
+ * when the browser supports typed arrays.
+ *
+ * Note:
+ *
+ *   - Firefox 4-29 lacks support for adding new properties to `Uint8Array` instances,
+ *     See: https://bugzilla.mozilla.org/show_bug.cgi?id=695438.
+ *
+ *   - Chrome 9-10 is missing the `TypedArray.prototype.subarray` function.
+ *
+ *   - IE10 has a broken `TypedArray.prototype.subarray` function which returns arrays of
+ *     incorrect length in some situations.
+
+ * We detect these buggy browsers and set `Buffer.TYPED_ARRAY_SUPPORT` to `false` so they
+ * get the Object implementation, which is slower but behaves correctly.
+ */
+Buffer.TYPED_ARRAY_SUPPORT = global.TYPED_ARRAY_SUPPORT !== undefined ? global.TYPED_ARRAY_SUPPORT : typedArraySupport();
+
+/*
+ * Export kMaxLength after typed array support is determined.
+ */
+exports.kMaxLength = kMaxLength();
+
+function typedArraySupport() {
+  try {
+    var arr = new Uint8Array(1);
+    arr.__proto__ = { __proto__: Uint8Array.prototype, foo: function foo() {
+        return 42;
+      } };
+    return arr.foo() === 42 && // typed array instances can be augmented
+    typeof arr.subarray === 'function' && // chrome 9-10 lack `subarray`
+    arr.subarray(1, 1).byteLength === 0; // ie10 has broken `subarray`
+  } catch (e) {
+    return false;
+  }
+}
+
+function kMaxLength() {
+  return Buffer.TYPED_ARRAY_SUPPORT ? 0x7fffffff : 0x3fffffff;
+}
+
+function createBuffer(that, length) {
+  if (kMaxLength() < length) {
+    throw new RangeError('Invalid typed array length');
+  }
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    // Return an augmented `Uint8Array` instance, for best performance
+    that = new Uint8Array(length);
+    that.__proto__ = Buffer.prototype;
+  } else {
+    // Fallback: Return an object instance of the Buffer class
+    if (that === null) {
+      that = new Buffer(length);
+    }
+    that.length = length;
+  }
+
+  return that;
+}
+
+/**
+ * The Buffer constructor returns instances of `Uint8Array` that have their
+ * prototype changed to `Buffer.prototype`. Furthermore, `Buffer` is a subclass of
+ * `Uint8Array`, so the returned instances will have all the node `Buffer` methods
+ * and the `Uint8Array` methods. Square bracket notation works as expected -- it
+ * returns a single octet.
+ *
+ * The `Uint8Array` prototype remains unmodified.
+ */
+
+function Buffer(arg, encodingOrOffset, length) {
+  if (!Buffer.TYPED_ARRAY_SUPPORT && !(this instanceof Buffer)) {
+    return new Buffer(arg, encodingOrOffset, length);
+  }
+
+  // Common case.
+  if (typeof arg === 'number') {
+    if (typeof encodingOrOffset === 'string') {
+      throw new Error('If encoding is specified then the first argument must be a string');
+    }
+    return allocUnsafe(this, arg);
+  }
+  return from(this, arg, encodingOrOffset, length);
+}
+
+Buffer.poolSize = 8192; // not used by this implementation
+
+// TODO: Legacy, not needed anymore. Remove in next major version.
+Buffer._augment = function (arr) {
+  arr.__proto__ = Buffer.prototype;
+  return arr;
 };
 
-let activated = true;
+function from(that, value, encodingOrOffset, length) {
+  if (typeof value === 'number') {
+    throw new TypeError('"value" argument must not be a number');
+  }
 
-let available_fonts = ['helvetica'];
-let styleList = ['normal', 'italic', 'oblique'];
+  if (typeof ArrayBuffer !== 'undefined' && value instanceof ArrayBuffer) {
+    return fromArrayBuffer(that, value, encodingOrOffset, length);
+  }
+
+  if (typeof value === 'string') {
+    return fromString(that, value, encodingOrOffset);
+  }
+
+  return fromObject(that, value);
+}
+
+/**
+ * Functionally equivalent to Buffer(arg, encoding) but throws a TypeError
+ * if value is a number.
+ * Buffer.from(str[, encoding])
+ * Buffer.from(array)
+ * Buffer.from(buffer)
+ * Buffer.from(arrayBuffer[, byteOffset[, length]])
+ **/
+Buffer.from = function (value, encodingOrOffset, length) {
+  return from(null, value, encodingOrOffset, length);
+};
+
+if (Buffer.TYPED_ARRAY_SUPPORT) {
+  Buffer.prototype.__proto__ = Uint8Array.prototype;
+  Buffer.__proto__ = Uint8Array;
+  if (typeof Symbol !== 'undefined' && Symbol.species && Buffer[Symbol.species] === Buffer) {
+    // Fix subarray() in ES2016. See: https://github.com/feross/buffer/pull/97
+    Object.defineProperty(Buffer, Symbol.species, {
+      value: null,
+      configurable: true
+    });
+  }
+}
+
+function assertSize(size) {
+  if (typeof size !== 'number') {
+    throw new TypeError('"size" argument must be a number');
+  } else if (size < 0) {
+    throw new RangeError('"size" argument must not be negative');
+  }
+}
+
+function alloc(that, size, fill, encoding) {
+  assertSize(size);
+  if (size <= 0) {
+    return createBuffer(that, size);
+  }
+  if (fill !== undefined) {
+    // Only pay attention to encoding if it's a string. This
+    // prevents accidentally sending in a number that would
+    // be interpretted as a start offset.
+    return typeof encoding === 'string' ? createBuffer(that, size).fill(fill, encoding) : createBuffer(that, size).fill(fill);
+  }
+  return createBuffer(that, size);
+}
+
+/**
+ * Creates a new filled Buffer instance.
+ * alloc(size[, fill[, encoding]])
+ **/
+Buffer.alloc = function (size, fill, encoding) {
+  return alloc(null, size, fill, encoding);
+};
+
+function allocUnsafe(that, size) {
+  assertSize(size);
+  that = createBuffer(that, size < 0 ? 0 : checked(size) | 0);
+  if (!Buffer.TYPED_ARRAY_SUPPORT) {
+    for (var i = 0; i < size; ++i) {
+      that[i] = 0;
+    }
+  }
+  return that;
+}
+
+/**
+ * Equivalent to Buffer(num), by default creates a non-zero-filled Buffer instance.
+ * */
+Buffer.allocUnsafe = function (size) {
+  return allocUnsafe(null, size);
+};
+/**
+ * Equivalent to SlowBuffer(num), by default creates a non-zero-filled Buffer instance.
+ */
+Buffer.allocUnsafeSlow = function (size) {
+  return allocUnsafe(null, size);
+};
+
+function fromString(that, string, encoding) {
+  if (typeof encoding !== 'string' || encoding === '') {
+    encoding = 'utf8';
+  }
+
+  if (!Buffer.isEncoding(encoding)) {
+    throw new TypeError('"encoding" must be a valid string encoding');
+  }
+
+  var length = byteLength(string, encoding) | 0;
+  that = createBuffer(that, length);
+
+  var actual = that.write(string, encoding);
+
+  if (actual !== length) {
+    // Writing a hex string, for example, that contains invalid characters will
+    // cause everything after the first invalid character to be ignored. (e.g.
+    // 'abxxcd' will be treated as 'ab')
+    that = that.slice(0, actual);
+  }
+
+  return that;
+}
+
+function fromArrayLike(that, array) {
+  var length = array.length < 0 ? 0 : checked(array.length) | 0;
+  that = createBuffer(that, length);
+  for (var i = 0; i < length; i += 1) {
+    that[i] = array[i] & 255;
+  }
+  return that;
+}
+
+function fromArrayBuffer(that, array, byteOffset, length) {
+  array.byteLength; // this throws if `array` is not a valid ArrayBuffer
+
+  if (byteOffset < 0 || array.byteLength < byteOffset) {
+    throw new RangeError('\'offset\' is out of bounds');
+  }
+
+  if (array.byteLength < byteOffset + (length || 0)) {
+    throw new RangeError('\'length\' is out of bounds');
+  }
+
+  if (byteOffset === undefined && length === undefined) {
+    array = new Uint8Array(array);
+  } else if (length === undefined) {
+    array = new Uint8Array(array, byteOffset);
+  } else {
+    array = new Uint8Array(array, byteOffset, length);
+  }
+
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    // Return an augmented `Uint8Array` instance, for best performance
+    that = array;
+    that.__proto__ = Buffer.prototype;
+  } else {
+    // Fallback: Return an object instance of the Buffer class
+    that = fromArrayLike(that, array);
+  }
+  return that;
+}
+
+function fromObject(that, obj) {
+  if (Buffer.isBuffer(obj)) {
+    var len = checked(obj.length) | 0;
+    that = createBuffer(that, len);
+
+    if (that.length === 0) {
+      return that;
+    }
+
+    obj.copy(that, 0, 0, len);
+    return that;
+  }
+
+  if (obj) {
+    if (typeof ArrayBuffer !== 'undefined' && obj.buffer instanceof ArrayBuffer || 'length' in obj) {
+      if (typeof obj.length !== 'number' || isnan(obj.length)) {
+        return createBuffer(that, 0);
+      }
+      return fromArrayLike(that, obj);
+    }
+
+    if (obj.type === 'Buffer' && isArray(obj.data)) {
+      return fromArrayLike(that, obj.data);
+    }
+  }
+
+  throw new TypeError('First argument must be a string, Buffer, ArrayBuffer, Array, or array-like object.');
+}
+
+function checked(length) {
+  // Note: cannot use `length < kMaxLength()` here because that fails when
+  // length is NaN (which is otherwise coerced to zero.)
+  if (length >= kMaxLength()) {
+    throw new RangeError('Attempt to allocate Buffer larger than maximum ' + 'size: 0x' + kMaxLength().toString(16) + ' bytes');
+  }
+  return length | 0;
+}
+
+function SlowBuffer(length) {
+  if (+length != length) {
+    // eslint-disable-line eqeqeq
+    length = 0;
+  }
+  return Buffer.alloc(+length);
+}
+
+Buffer.isBuffer = function isBuffer(b) {
+  return !!(b != null && b._isBuffer);
+};
+
+Buffer.compare = function compare(a, b) {
+  if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b)) {
+    throw new TypeError('Arguments must be Buffers');
+  }
+
+  if (a === b) return 0;
+
+  var x = a.length;
+  var y = b.length;
+
+  for (var i = 0, len = Math.min(x, y); i < len; ++i) {
+    if (a[i] !== b[i]) {
+      x = a[i];
+      y = b[i];
+      break;
+    }
+  }
+
+  if (x < y) return -1;
+  if (y < x) return 1;
+  return 0;
+};
+
+Buffer.isEncoding = function isEncoding(encoding) {
+  switch (String(encoding).toLowerCase()) {
+    case 'hex':
+    case 'utf8':
+    case 'utf-8':
+    case 'ascii':
+    case 'latin1':
+    case 'binary':
+    case 'base64':
+    case 'ucs2':
+    case 'ucs-2':
+    case 'utf16le':
+    case 'utf-16le':
+      return true;
+    default:
+      return false;
+  }
+};
+
+Buffer.concat = function concat(list, length) {
+  if (!isArray(list)) {
+    throw new TypeError('"list" argument must be an Array of Buffers');
+  }
+
+  if (list.length === 0) {
+    return Buffer.alloc(0);
+  }
+
+  var i;
+  if (length === undefined) {
+    length = 0;
+    for (i = 0; i < list.length; ++i) {
+      length += list[i].length;
+    }
+  }
+
+  var buffer = Buffer.allocUnsafe(length);
+  var pos = 0;
+  for (i = 0; i < list.length; ++i) {
+    var buf = list[i];
+    if (!Buffer.isBuffer(buf)) {
+      throw new TypeError('"list" argument must be an Array of Buffers');
+    }
+    buf.copy(buffer, pos);
+    pos += buf.length;
+  }
+  return buffer;
+};
+
+function byteLength(string, encoding) {
+  if (Buffer.isBuffer(string)) {
+    return string.length;
+  }
+  if (typeof ArrayBuffer !== 'undefined' && typeof ArrayBuffer.isView === 'function' && (ArrayBuffer.isView(string) || string instanceof ArrayBuffer)) {
+    return string.byteLength;
+  }
+  if (typeof string !== 'string') {
+    string = '' + string;
+  }
+
+  var len = string.length;
+  if (len === 0) return 0;
+
+  // Use a for loop to avoid recursion
+  var loweredCase = false;
+  for (;;) {
+    switch (encoding) {
+      case 'ascii':
+      case 'latin1':
+      case 'binary':
+        return len;
+      case 'utf8':
+      case 'utf-8':
+      case undefined:
+        return utf8ToBytes(string).length;
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return len * 2;
+      case 'hex':
+        return len >>> 1;
+      case 'base64':
+        return base64ToBytes(string).length;
+      default:
+        if (loweredCase) return utf8ToBytes(string).length; // assume utf8
+        encoding = ('' + encoding).toLowerCase();
+        loweredCase = true;
+    }
+  }
+}
+Buffer.byteLength = byteLength;
+
+function slowToString(encoding, start, end) {
+  var loweredCase = false;
+
+  // No need to verify that "this.length <= MAX_UINT32" since it's a read-only
+  // property of a typed array.
+
+  // This behaves neither like String nor Uint8Array in that we set start/end
+  // to their upper/lower bounds if the value passed is out of range.
+  // undefined is handled specially as per ECMA-262 6th Edition,
+  // Section 13.3.3.7 Runtime Semantics: KeyedBindingInitialization.
+  if (start === undefined || start < 0) {
+    start = 0;
+  }
+  // Return early if start > this.length. Done here to prevent potential uint32
+  // coercion fail below.
+  if (start > this.length) {
+    return '';
+  }
+
+  if (end === undefined || end > this.length) {
+    end = this.length;
+  }
+
+  if (end <= 0) {
+    return '';
+  }
+
+  // Force coersion to uint32. This will also coerce falsey/NaN values to 0.
+  end >>>= 0;
+  start >>>= 0;
+
+  if (end <= start) {
+    return '';
+  }
+
+  if (!encoding) encoding = 'utf8';
+
+  while (true) {
+    switch (encoding) {
+      case 'hex':
+        return hexSlice(this, start, end);
+
+      case 'utf8':
+      case 'utf-8':
+        return utf8Slice(this, start, end);
+
+      case 'ascii':
+        return asciiSlice(this, start, end);
+
+      case 'latin1':
+      case 'binary':
+        return latin1Slice(this, start, end);
+
+      case 'base64':
+        return base64Slice(this, start, end);
+
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return utf16leSlice(this, start, end);
+
+      default:
+        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding);
+        encoding = (encoding + '').toLowerCase();
+        loweredCase = true;
+    }
+  }
+}
+
+// The property is used by `Buffer.isBuffer` and `is-buffer` (in Safari 5-7) to detect
+// Buffer instances.
+Buffer.prototype._isBuffer = true;
+
+function swap(b, n, m) {
+  var i = b[n];
+  b[n] = b[m];
+  b[m] = i;
+}
+
+Buffer.prototype.swap16 = function swap16() {
+  var len = this.length;
+  if (len % 2 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 16-bits');
+  }
+  for (var i = 0; i < len; i += 2) {
+    swap(this, i, i + 1);
+  }
+  return this;
+};
+
+Buffer.prototype.swap32 = function swap32() {
+  var len = this.length;
+  if (len % 4 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 32-bits');
+  }
+  for (var i = 0; i < len; i += 4) {
+    swap(this, i, i + 3);
+    swap(this, i + 1, i + 2);
+  }
+  return this;
+};
+
+Buffer.prototype.swap64 = function swap64() {
+  var len = this.length;
+  if (len % 8 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 64-bits');
+  }
+  for (var i = 0; i < len; i += 8) {
+    swap(this, i, i + 7);
+    swap(this, i + 1, i + 6);
+    swap(this, i + 2, i + 5);
+    swap(this, i + 3, i + 4);
+  }
+  return this;
+};
+
+Buffer.prototype.toString = function toString() {
+  var length = this.length | 0;
+  if (length === 0) return '';
+  if (arguments.length === 0) return utf8Slice(this, 0, length);
+  return slowToString.apply(this, arguments);
+};
+
+Buffer.prototype.equals = function equals(b) {
+  if (!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer');
+  if (this === b) return true;
+  return Buffer.compare(this, b) === 0;
+};
+
+Buffer.prototype.inspect = function inspect() {
+  var str = '';
+  var max = exports.INSPECT_MAX_BYTES;
+  if (this.length > 0) {
+    str = this.toString('hex', 0, max).match(/.{2}/g).join(' ');
+    if (this.length > max) str += ' ... ';
+  }
+  return '<Buffer ' + str + '>';
+};
+
+Buffer.prototype.compare = function compare(target, start, end, thisStart, thisEnd) {
+  if (!Buffer.isBuffer(target)) {
+    throw new TypeError('Argument must be a Buffer');
+  }
+
+  if (start === undefined) {
+    start = 0;
+  }
+  if (end === undefined) {
+    end = target ? target.length : 0;
+  }
+  if (thisStart === undefined) {
+    thisStart = 0;
+  }
+  if (thisEnd === undefined) {
+    thisEnd = this.length;
+  }
+
+  if (start < 0 || end > target.length || thisStart < 0 || thisEnd > this.length) {
+    throw new RangeError('out of range index');
+  }
+
+  if (thisStart >= thisEnd && start >= end) {
+    return 0;
+  }
+  if (thisStart >= thisEnd) {
+    return -1;
+  }
+  if (start >= end) {
+    return 1;
+  }
+
+  start >>>= 0;
+  end >>>= 0;
+  thisStart >>>= 0;
+  thisEnd >>>= 0;
+
+  if (this === target) return 0;
+
+  var x = thisEnd - thisStart;
+  var y = end - start;
+  var len = Math.min(x, y);
+
+  var thisCopy = this.slice(thisStart, thisEnd);
+  var targetCopy = target.slice(start, end);
+
+  for (var i = 0; i < len; ++i) {
+    if (thisCopy[i] !== targetCopy[i]) {
+      x = thisCopy[i];
+      y = targetCopy[i];
+      break;
+    }
+  }
+
+  if (x < y) return -1;
+  if (y < x) return 1;
+  return 0;
+};
+
+// Finds either the first index of `val` in `buffer` at offset >= `byteOffset`,
+// OR the last index of `val` in `buffer` at offset <= `byteOffset`.
+//
+// Arguments:
+// - buffer - a Buffer to search
+// - val - a string, Buffer, or number
+// - byteOffset - an index into `buffer`; will be clamped to an int32
+// - encoding - an optional encoding, relevant is val is a string
+// - dir - true for indexOf, false for lastIndexOf
+function bidirectionalIndexOf(buffer, val, byteOffset, encoding, dir) {
+  // Empty buffer means no match
+  if (buffer.length === 0) return -1;
+
+  // Normalize byteOffset
+  if (typeof byteOffset === 'string') {
+    encoding = byteOffset;
+    byteOffset = 0;
+  } else if (byteOffset > 0x7fffffff) {
+    byteOffset = 0x7fffffff;
+  } else if (byteOffset < -0x80000000) {
+    byteOffset = -0x80000000;
+  }
+  byteOffset = +byteOffset; // Coerce to Number.
+  if (isNaN(byteOffset)) {
+    // byteOffset: it it's undefined, null, NaN, "foo", etc, search whole buffer
+    byteOffset = dir ? 0 : buffer.length - 1;
+  }
+
+  // Normalize byteOffset: negative offsets start from the end of the buffer
+  if (byteOffset < 0) byteOffset = buffer.length + byteOffset;
+  if (byteOffset >= buffer.length) {
+    if (dir) return -1;else byteOffset = buffer.length - 1;
+  } else if (byteOffset < 0) {
+    if (dir) byteOffset = 0;else return -1;
+  }
+
+  // Normalize val
+  if (typeof val === 'string') {
+    val = Buffer.from(val, encoding);
+  }
+
+  // Finally, search either indexOf (if dir is true) or lastIndexOf
+  if (Buffer.isBuffer(val)) {
+    // Special case: looking for empty string/buffer always fails
+    if (val.length === 0) {
+      return -1;
+    }
+    return arrayIndexOf(buffer, val, byteOffset, encoding, dir);
+  } else if (typeof val === 'number') {
+    val = val & 0xFF; // Search for a byte value [0-255]
+    if (Buffer.TYPED_ARRAY_SUPPORT && typeof Uint8Array.prototype.indexOf === 'function') {
+      if (dir) {
+        return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset);
+      } else {
+        return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset);
+      }
+    }
+    return arrayIndexOf(buffer, [val], byteOffset, encoding, dir);
+  }
+
+  throw new TypeError('val must be string, number or Buffer');
+}
+
+function arrayIndexOf(arr, val, byteOffset, encoding, dir) {
+  var indexSize = 1;
+  var arrLength = arr.length;
+  var valLength = val.length;
+
+  if (encoding !== undefined) {
+    encoding = String(encoding).toLowerCase();
+    if (encoding === 'ucs2' || encoding === 'ucs-2' || encoding === 'utf16le' || encoding === 'utf-16le') {
+      if (arr.length < 2 || val.length < 2) {
+        return -1;
+      }
+      indexSize = 2;
+      arrLength /= 2;
+      valLength /= 2;
+      byteOffset /= 2;
+    }
+  }
+
+  function read(buf, i) {
+    if (indexSize === 1) {
+      return buf[i];
+    } else {
+      return buf.readUInt16BE(i * indexSize);
+    }
+  }
+
+  var i;
+  if (dir) {
+    var foundIndex = -1;
+    for (i = byteOffset; i < arrLength; i++) {
+      if (read(arr, i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
+        if (foundIndex === -1) foundIndex = i;
+        if (i - foundIndex + 1 === valLength) return foundIndex * indexSize;
+      } else {
+        if (foundIndex !== -1) i -= i - foundIndex;
+        foundIndex = -1;
+      }
+    }
+  } else {
+    if (byteOffset + valLength > arrLength) byteOffset = arrLength - valLength;
+    for (i = byteOffset; i >= 0; i--) {
+      var found = true;
+      for (var j = 0; j < valLength; j++) {
+        if (read(arr, i + j) !== read(val, j)) {
+          found = false;
+          break;
+        }
+      }
+      if (found) return i;
+    }
+  }
+
+  return -1;
+}
+
+Buffer.prototype.includes = function includes(val, byteOffset, encoding) {
+  return this.indexOf(val, byteOffset, encoding) !== -1;
+};
+
+Buffer.prototype.indexOf = function indexOf(val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, true);
+};
+
+Buffer.prototype.lastIndexOf = function lastIndexOf(val, byteOffset, encoding) {
+  return bidirectionalIndexOf(this, val, byteOffset, encoding, false);
+};
+
+function hexWrite(buf, string, offset, length) {
+  offset = Number(offset) || 0;
+  var remaining = buf.length - offset;
+  if (!length) {
+    length = remaining;
+  } else {
+    length = Number(length);
+    if (length > remaining) {
+      length = remaining;
+    }
+  }
+
+  // must be an even number of digits
+  var strLen = string.length;
+  if (strLen % 2 !== 0) throw new TypeError('Invalid hex string');
+
+  if (length > strLen / 2) {
+    length = strLen / 2;
+  }
+  for (var i = 0; i < length; ++i) {
+    var parsed = parseInt(string.substr(i * 2, 2), 16);
+    if (isNaN(parsed)) return i;
+    buf[offset + i] = parsed;
+  }
+  return i;
+}
+
+function utf8Write(buf, string, offset, length) {
+  return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length);
+}
+
+function asciiWrite(buf, string, offset, length) {
+  return blitBuffer(asciiToBytes(string), buf, offset, length);
+}
+
+function latin1Write(buf, string, offset, length) {
+  return asciiWrite(buf, string, offset, length);
+}
+
+function base64Write(buf, string, offset, length) {
+  return blitBuffer(base64ToBytes(string), buf, offset, length);
+}
+
+function ucs2Write(buf, string, offset, length) {
+  return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length);
+}
+
+Buffer.prototype.write = function write(string, offset, length, encoding) {
+  // Buffer#write(string)
+  if (offset === undefined) {
+    encoding = 'utf8';
+    length = this.length;
+    offset = 0;
+    // Buffer#write(string, encoding)
+  } else if (length === undefined && typeof offset === 'string') {
+    encoding = offset;
+    length = this.length;
+    offset = 0;
+    // Buffer#write(string, offset[, length][, encoding])
+  } else if (isFinite(offset)) {
+    offset = offset | 0;
+    if (isFinite(length)) {
+      length = length | 0;
+      if (encoding === undefined) encoding = 'utf8';
+    } else {
+      encoding = length;
+      length = undefined;
+    }
+    // legacy write(string, encoding, offset, length) - remove in v0.13
+  } else {
+    throw new Error('Buffer.write(string, encoding, offset[, length]) is no longer supported');
+  }
+
+  var remaining = this.length - offset;
+  if (length === undefined || length > remaining) length = remaining;
+
+  if (string.length > 0 && (length < 0 || offset < 0) || offset > this.length) {
+    throw new RangeError('Attempt to write outside buffer bounds');
+  }
+
+  if (!encoding) encoding = 'utf8';
+
+  var loweredCase = false;
+  for (;;) {
+    switch (encoding) {
+      case 'hex':
+        return hexWrite(this, string, offset, length);
+
+      case 'utf8':
+      case 'utf-8':
+        return utf8Write(this, string, offset, length);
+
+      case 'ascii':
+        return asciiWrite(this, string, offset, length);
+
+      case 'latin1':
+      case 'binary':
+        return latin1Write(this, string, offset, length);
+
+      case 'base64':
+        // Warning: maxLength not taken into account in base64Write
+        return base64Write(this, string, offset, length);
+
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return ucs2Write(this, string, offset, length);
+
+      default:
+        if (loweredCase) throw new TypeError('Unknown encoding: ' + encoding);
+        encoding = ('' + encoding).toLowerCase();
+        loweredCase = true;
+    }
+  }
+};
+
+Buffer.prototype.toJSON = function toJSON() {
+  return {
+    type: 'Buffer',
+    data: Array.prototype.slice.call(this._arr || this, 0)
+  };
+};
+
+function base64Slice(buf, start, end) {
+  if (start === 0 && end === buf.length) {
+    return base64.fromByteArray(buf);
+  } else {
+    return base64.fromByteArray(buf.slice(start, end));
+  }
+}
+
+function utf8Slice(buf, start, end) {
+  end = Math.min(buf.length, end);
+  var res = [];
+
+  var i = start;
+  while (i < end) {
+    var firstByte = buf[i];
+    var codePoint = null;
+    var bytesPerSequence = firstByte > 0xEF ? 4 : firstByte > 0xDF ? 3 : firstByte > 0xBF ? 2 : 1;
+
+    if (i + bytesPerSequence <= end) {
+      var secondByte, thirdByte, fourthByte, tempCodePoint;
+
+      switch (bytesPerSequence) {
+        case 1:
+          if (firstByte < 0x80) {
+            codePoint = firstByte;
+          }
+          break;
+        case 2:
+          secondByte = buf[i + 1];
+          if ((secondByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0x1F) << 0x6 | secondByte & 0x3F;
+            if (tempCodePoint > 0x7F) {
+              codePoint = tempCodePoint;
+            }
+          }
+          break;
+        case 3:
+          secondByte = buf[i + 1];
+          thirdByte = buf[i + 2];
+          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0xF) << 0xC | (secondByte & 0x3F) << 0x6 | thirdByte & 0x3F;
+            if (tempCodePoint > 0x7FF && (tempCodePoint < 0xD800 || tempCodePoint > 0xDFFF)) {
+              codePoint = tempCodePoint;
+            }
+          }
+          break;
+        case 4:
+          secondByte = buf[i + 1];
+          thirdByte = buf[i + 2];
+          fourthByte = buf[i + 3];
+          if ((secondByte & 0xC0) === 0x80 && (thirdByte & 0xC0) === 0x80 && (fourthByte & 0xC0) === 0x80) {
+            tempCodePoint = (firstByte & 0xF) << 0x12 | (secondByte & 0x3F) << 0xC | (thirdByte & 0x3F) << 0x6 | fourthByte & 0x3F;
+            if (tempCodePoint > 0xFFFF && tempCodePoint < 0x110000) {
+              codePoint = tempCodePoint;
+            }
+          }
+      }
+    }
+
+    if (codePoint === null) {
+      // we did not generate a valid codePoint so insert a
+      // replacement char (U+FFFD) and advance only 1 byte
+      codePoint = 0xFFFD;
+      bytesPerSequence = 1;
+    } else if (codePoint > 0xFFFF) {
+      // encode to utf16 (surrogate pair dance)
+      codePoint -= 0x10000;
+      res.push(codePoint >>> 10 & 0x3FF | 0xD800);
+      codePoint = 0xDC00 | codePoint & 0x3FF;
+    }
+
+    res.push(codePoint);
+    i += bytesPerSequence;
+  }
+
+  return decodeCodePointsArray(res);
+}
+
+// Based on http://stackoverflow.com/a/22747272/680742, the browser with
+// the lowest limit is Chrome, with 0x10000 args.
+// We go 1 magnitude less, for safety
+var MAX_ARGUMENTS_LENGTH = 0x1000;
+
+function decodeCodePointsArray(codePoints) {
+  var len = codePoints.length;
+  if (len <= MAX_ARGUMENTS_LENGTH) {
+    return String.fromCharCode.apply(String, codePoints); // avoid extra slice()
+  }
+
+  // Decode in chunks to avoid "call stack size exceeded".
+  var res = '';
+  var i = 0;
+  while (i < len) {
+    res += String.fromCharCode.apply(String, codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH));
+  }
+  return res;
+}
+
+function asciiSlice(buf, start, end) {
+  var ret = '';
+  end = Math.min(buf.length, end);
+
+  for (var i = start; i < end; ++i) {
+    ret += String.fromCharCode(buf[i] & 0x7F);
+  }
+  return ret;
+}
+
+function latin1Slice(buf, start, end) {
+  var ret = '';
+  end = Math.min(buf.length, end);
+
+  for (var i = start; i < end; ++i) {
+    ret += String.fromCharCode(buf[i]);
+  }
+  return ret;
+}
+
+function hexSlice(buf, start, end) {
+  var len = buf.length;
+
+  if (!start || start < 0) start = 0;
+  if (!end || end < 0 || end > len) end = len;
+
+  var out = '';
+  for (var i = start; i < end; ++i) {
+    out += toHex(buf[i]);
+  }
+  return out;
+}
+
+function utf16leSlice(buf, start, end) {
+  var bytes = buf.slice(start, end);
+  var res = '';
+  for (var i = 0; i < bytes.length; i += 2) {
+    res += String.fromCharCode(bytes[i] + bytes[i + 1] * 256);
+  }
+  return res;
+}
+
+Buffer.prototype.slice = function slice(start, end) {
+  var len = this.length;
+  start = ~~start;
+  end = end === undefined ? len : ~~end;
+
+  if (start < 0) {
+    start += len;
+    if (start < 0) start = 0;
+  } else if (start > len) {
+    start = len;
+  }
+
+  if (end < 0) {
+    end += len;
+    if (end < 0) end = 0;
+  } else if (end > len) {
+    end = len;
+  }
+
+  if (end < start) end = start;
+
+  var newBuf;
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    newBuf = this.subarray(start, end);
+    newBuf.__proto__ = Buffer.prototype;
+  } else {
+    var sliceLen = end - start;
+    newBuf = new Buffer(sliceLen, undefined);
+    for (var i = 0; i < sliceLen; ++i) {
+      newBuf[i] = this[i + start];
+    }
+  }
+
+  return newBuf;
+};
+
+/*
+ * Need to make sure that buffer isn't trying to write out of bounds.
+ */
+function checkOffset(offset, ext, length) {
+  if (offset % 1 !== 0 || offset < 0) throw new RangeError('offset is not uint');
+  if (offset + ext > length) throw new RangeError('Trying to access beyond buffer length');
+}
+
+Buffer.prototype.readUIntLE = function readUIntLE(offset, byteLength, noAssert) {
+  offset = offset | 0;
+  byteLength = byteLength | 0;
+  if (!noAssert) checkOffset(offset, byteLength, this.length);
+
+  var val = this[offset];
+  var mul = 1;
+  var i = 0;
+  while (++i < byteLength && (mul *= 0x100)) {
+    val += this[offset + i] * mul;
+  }
+
+  return val;
+};
+
+Buffer.prototype.readUIntBE = function readUIntBE(offset, byteLength, noAssert) {
+  offset = offset | 0;
+  byteLength = byteLength | 0;
+  if (!noAssert) {
+    checkOffset(offset, byteLength, this.length);
+  }
+
+  var val = this[offset + --byteLength];
+  var mul = 1;
+  while (byteLength > 0 && (mul *= 0x100)) {
+    val += this[offset + --byteLength] * mul;
+  }
+
+  return val;
+};
+
+Buffer.prototype.readUInt8 = function readUInt8(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 1, this.length);
+  return this[offset];
+};
+
+Buffer.prototype.readUInt16LE = function readUInt16LE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 2, this.length);
+  return this[offset] | this[offset + 1] << 8;
+};
+
+Buffer.prototype.readUInt16BE = function readUInt16BE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 2, this.length);
+  return this[offset] << 8 | this[offset + 1];
+};
+
+Buffer.prototype.readUInt32LE = function readUInt32LE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 4, this.length);
+
+  return (this[offset] | this[offset + 1] << 8 | this[offset + 2] << 16) + this[offset + 3] * 0x1000000;
+};
+
+Buffer.prototype.readUInt32BE = function readUInt32BE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 4, this.length);
+
+  return this[offset] * 0x1000000 + (this[offset + 1] << 16 | this[offset + 2] << 8 | this[offset + 3]);
+};
+
+Buffer.prototype.readIntLE = function readIntLE(offset, byteLength, noAssert) {
+  offset = offset | 0;
+  byteLength = byteLength | 0;
+  if (!noAssert) checkOffset(offset, byteLength, this.length);
+
+  var val = this[offset];
+  var mul = 1;
+  var i = 0;
+  while (++i < byteLength && (mul *= 0x100)) {
+    val += this[offset + i] * mul;
+  }
+  mul *= 0x80;
+
+  if (val >= mul) val -= Math.pow(2, 8 * byteLength);
+
+  return val;
+};
+
+Buffer.prototype.readIntBE = function readIntBE(offset, byteLength, noAssert) {
+  offset = offset | 0;
+  byteLength = byteLength | 0;
+  if (!noAssert) checkOffset(offset, byteLength, this.length);
+
+  var i = byteLength;
+  var mul = 1;
+  var val = this[offset + --i];
+  while (i > 0 && (mul *= 0x100)) {
+    val += this[offset + --i] * mul;
+  }
+  mul *= 0x80;
+
+  if (val >= mul) val -= Math.pow(2, 8 * byteLength);
+
+  return val;
+};
+
+Buffer.prototype.readInt8 = function readInt8(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 1, this.length);
+  if (!(this[offset] & 0x80)) return this[offset];
+  return (0xff - this[offset] + 1) * -1;
+};
+
+Buffer.prototype.readInt16LE = function readInt16LE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 2, this.length);
+  var val = this[offset] | this[offset + 1] << 8;
+  return val & 0x8000 ? val | 0xFFFF0000 : val;
+};
+
+Buffer.prototype.readInt16BE = function readInt16BE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 2, this.length);
+  var val = this[offset + 1] | this[offset] << 8;
+  return val & 0x8000 ? val | 0xFFFF0000 : val;
+};
+
+Buffer.prototype.readInt32LE = function readInt32LE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 4, this.length);
+
+  return this[offset] | this[offset + 1] << 8 | this[offset + 2] << 16 | this[offset + 3] << 24;
+};
+
+Buffer.prototype.readInt32BE = function readInt32BE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 4, this.length);
+
+  return this[offset] << 24 | this[offset + 1] << 16 | this[offset + 2] << 8 | this[offset + 3];
+};
+
+Buffer.prototype.readFloatLE = function readFloatLE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 4, this.length);
+  return ieee754.read(this, offset, true, 23, 4);
+};
+
+Buffer.prototype.readFloatBE = function readFloatBE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 4, this.length);
+  return ieee754.read(this, offset, false, 23, 4);
+};
+
+Buffer.prototype.readDoubleLE = function readDoubleLE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 8, this.length);
+  return ieee754.read(this, offset, true, 52, 8);
+};
+
+Buffer.prototype.readDoubleBE = function readDoubleBE(offset, noAssert) {
+  if (!noAssert) checkOffset(offset, 8, this.length);
+  return ieee754.read(this, offset, false, 52, 8);
+};
+
+function checkInt(buf, value, offset, ext, max, min) {
+  if (!Buffer.isBuffer(buf)) throw new TypeError('"buffer" argument must be a Buffer instance');
+  if (value > max || value < min) throw new RangeError('"value" argument is out of bounds');
+  if (offset + ext > buf.length) throw new RangeError('Index out of range');
+}
+
+Buffer.prototype.writeUIntLE = function writeUIntLE(value, offset, byteLength, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  byteLength = byteLength | 0;
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1;
+    checkInt(this, value, offset, byteLength, maxBytes, 0);
+  }
+
+  var mul = 1;
+  var i = 0;
+  this[offset] = value & 0xFF;
+  while (++i < byteLength && (mul *= 0x100)) {
+    this[offset + i] = value / mul & 0xFF;
+  }
+
+  return offset + byteLength;
+};
+
+Buffer.prototype.writeUIntBE = function writeUIntBE(value, offset, byteLength, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  byteLength = byteLength | 0;
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1;
+    checkInt(this, value, offset, byteLength, maxBytes, 0);
+  }
+
+  var i = byteLength - 1;
+  var mul = 1;
+  this[offset + i] = value & 0xFF;
+  while (--i >= 0 && (mul *= 0x100)) {
+    this[offset + i] = value / mul & 0xFF;
+  }
+
+  return offset + byteLength;
+};
+
+Buffer.prototype.writeUInt8 = function writeUInt8(value, offset, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) checkInt(this, value, offset, 1, 0xff, 0);
+  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value);
+  this[offset] = value & 0xff;
+  return offset + 1;
+};
+
+function objectWriteUInt16(buf, value, offset, littleEndian) {
+  if (value < 0) value = 0xffff + value + 1;
+  for (var i = 0, j = Math.min(buf.length - offset, 2); i < j; ++i) {
+    buf[offset + i] = (value & 0xff << 8 * (littleEndian ? i : 1 - i)) >>> (littleEndian ? i : 1 - i) * 8;
+  }
+}
+
+Buffer.prototype.writeUInt16LE = function writeUInt16LE(value, offset, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0);
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = value & 0xff;
+    this[offset + 1] = value >>> 8;
+  } else {
+    objectWriteUInt16(this, value, offset, true);
+  }
+  return offset + 2;
+};
+
+Buffer.prototype.writeUInt16BE = function writeUInt16BE(value, offset, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) checkInt(this, value, offset, 2, 0xffff, 0);
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = value >>> 8;
+    this[offset + 1] = value & 0xff;
+  } else {
+    objectWriteUInt16(this, value, offset, false);
+  }
+  return offset + 2;
+};
+
+function objectWriteUInt32(buf, value, offset, littleEndian) {
+  if (value < 0) value = 0xffffffff + value + 1;
+  for (var i = 0, j = Math.min(buf.length - offset, 4); i < j; ++i) {
+    buf[offset + i] = value >>> (littleEndian ? i : 3 - i) * 8 & 0xff;
+  }
+}
+
+Buffer.prototype.writeUInt32LE = function writeUInt32LE(value, offset, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0);
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset + 3] = value >>> 24;
+    this[offset + 2] = value >>> 16;
+    this[offset + 1] = value >>> 8;
+    this[offset] = value & 0xff;
+  } else {
+    objectWriteUInt32(this, value, offset, true);
+  }
+  return offset + 4;
+};
+
+Buffer.prototype.writeUInt32BE = function writeUInt32BE(value, offset, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) checkInt(this, value, offset, 4, 0xffffffff, 0);
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = value >>> 24;
+    this[offset + 1] = value >>> 16;
+    this[offset + 2] = value >>> 8;
+    this[offset + 3] = value & 0xff;
+  } else {
+    objectWriteUInt32(this, value, offset, false);
+  }
+  return offset + 4;
+};
+
+Buffer.prototype.writeIntLE = function writeIntLE(value, offset, byteLength, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) {
+    var limit = Math.pow(2, 8 * byteLength - 1);
+
+    checkInt(this, value, offset, byteLength, limit - 1, -limit);
+  }
+
+  var i = 0;
+  var mul = 1;
+  var sub = 0;
+  this[offset] = value & 0xFF;
+  while (++i < byteLength && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i - 1] !== 0) {
+      sub = 1;
+    }
+    this[offset + i] = (value / mul >> 0) - sub & 0xFF;
+  }
+
+  return offset + byteLength;
+};
+
+Buffer.prototype.writeIntBE = function writeIntBE(value, offset, byteLength, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) {
+    var limit = Math.pow(2, 8 * byteLength - 1);
+
+    checkInt(this, value, offset, byteLength, limit - 1, -limit);
+  }
+
+  var i = byteLength - 1;
+  var mul = 1;
+  var sub = 0;
+  this[offset + i] = value & 0xFF;
+  while (--i >= 0 && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i + 1] !== 0) {
+      sub = 1;
+    }
+    this[offset + i] = (value / mul >> 0) - sub & 0xFF;
+  }
+
+  return offset + byteLength;
+};
+
+Buffer.prototype.writeInt8 = function writeInt8(value, offset, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) checkInt(this, value, offset, 1, 0x7f, -0x80);
+  if (!Buffer.TYPED_ARRAY_SUPPORT) value = Math.floor(value);
+  if (value < 0) value = 0xff + value + 1;
+  this[offset] = value & 0xff;
+  return offset + 1;
+};
+
+Buffer.prototype.writeInt16LE = function writeInt16LE(value, offset, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000);
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = value & 0xff;
+    this[offset + 1] = value >>> 8;
+  } else {
+    objectWriteUInt16(this, value, offset, true);
+  }
+  return offset + 2;
+};
+
+Buffer.prototype.writeInt16BE = function writeInt16BE(value, offset, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) checkInt(this, value, offset, 2, 0x7fff, -0x8000);
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = value >>> 8;
+    this[offset + 1] = value & 0xff;
+  } else {
+    objectWriteUInt16(this, value, offset, false);
+  }
+  return offset + 2;
+};
+
+Buffer.prototype.writeInt32LE = function writeInt32LE(value, offset, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000);
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = value & 0xff;
+    this[offset + 1] = value >>> 8;
+    this[offset + 2] = value >>> 16;
+    this[offset + 3] = value >>> 24;
+  } else {
+    objectWriteUInt32(this, value, offset, true);
+  }
+  return offset + 4;
+};
+
+Buffer.prototype.writeInt32BE = function writeInt32BE(value, offset, noAssert) {
+  value = +value;
+  offset = offset | 0;
+  if (!noAssert) checkInt(this, value, offset, 4, 0x7fffffff, -0x80000000);
+  if (value < 0) value = 0xffffffff + value + 1;
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    this[offset] = value >>> 24;
+    this[offset + 1] = value >>> 16;
+    this[offset + 2] = value >>> 8;
+    this[offset + 3] = value & 0xff;
+  } else {
+    objectWriteUInt32(this, value, offset, false);
+  }
+  return offset + 4;
+};
+
+function checkIEEE754(buf, value, offset, ext, max, min) {
+  if (offset + ext > buf.length) throw new RangeError('Index out of range');
+  if (offset < 0) throw new RangeError('Index out of range');
+}
+
+function writeFloat(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    checkIEEE754(buf, value, offset, 4, 3.4028234663852886e+38, -3.4028234663852886e+38);
+  }
+  ieee754.write(buf, value, offset, littleEndian, 23, 4);
+  return offset + 4;
+}
+
+Buffer.prototype.writeFloatLE = function writeFloatLE(value, offset, noAssert) {
+  return writeFloat(this, value, offset, true, noAssert);
+};
+
+Buffer.prototype.writeFloatBE = function writeFloatBE(value, offset, noAssert) {
+  return writeFloat(this, value, offset, false, noAssert);
+};
+
+function writeDouble(buf, value, offset, littleEndian, noAssert) {
+  if (!noAssert) {
+    checkIEEE754(buf, value, offset, 8, 1.7976931348623157E+308, -1.7976931348623157E+308);
+  }
+  ieee754.write(buf, value, offset, littleEndian, 52, 8);
+  return offset + 8;
+}
+
+Buffer.prototype.writeDoubleLE = function writeDoubleLE(value, offset, noAssert) {
+  return writeDouble(this, value, offset, true, noAssert);
+};
+
+Buffer.prototype.writeDoubleBE = function writeDoubleBE(value, offset, noAssert) {
+  return writeDouble(this, value, offset, false, noAssert);
+};
+
+// copy(targetBuffer, targetStart=0, sourceStart=0, sourceEnd=buffer.length)
+Buffer.prototype.copy = function copy(target, targetStart, start, end) {
+  if (!start) start = 0;
+  if (!end && end !== 0) end = this.length;
+  if (targetStart >= target.length) targetStart = target.length;
+  if (!targetStart) targetStart = 0;
+  if (end > 0 && end < start) end = start;
+
+  // Copy 0 bytes; we're done
+  if (end === start) return 0;
+  if (target.length === 0 || this.length === 0) return 0;
+
+  // Fatal error conditions
+  if (targetStart < 0) {
+    throw new RangeError('targetStart out of bounds');
+  }
+  if (start < 0 || start >= this.length) throw new RangeError('sourceStart out of bounds');
+  if (end < 0) throw new RangeError('sourceEnd out of bounds');
+
+  // Are we oob?
+  if (end > this.length) end = this.length;
+  if (target.length - targetStart < end - start) {
+    end = target.length - targetStart + start;
+  }
+
+  var len = end - start;
+  var i;
+
+  if (this === target && start < targetStart && targetStart < end) {
+    // descending copy from end
+    for (i = len - 1; i >= 0; --i) {
+      target[i + targetStart] = this[i + start];
+    }
+  } else if (len < 1000 || !Buffer.TYPED_ARRAY_SUPPORT) {
+    // ascending copy from start
+    for (i = 0; i < len; ++i) {
+      target[i + targetStart] = this[i + start];
+    }
+  } else {
+    Uint8Array.prototype.set.call(target, this.subarray(start, start + len), targetStart);
+  }
+
+  return len;
+};
+
+// Usage:
+//    buffer.fill(number[, offset[, end]])
+//    buffer.fill(buffer[, offset[, end]])
+//    buffer.fill(string[, offset[, end]][, encoding])
+Buffer.prototype.fill = function fill(val, start, end, encoding) {
+  // Handle string cases:
+  if (typeof val === 'string') {
+    if (typeof start === 'string') {
+      encoding = start;
+      start = 0;
+      end = this.length;
+    } else if (typeof end === 'string') {
+      encoding = end;
+      end = this.length;
+    }
+    if (val.length === 1) {
+      var code = val.charCodeAt(0);
+      if (code < 256) {
+        val = code;
+      }
+    }
+    if (encoding !== undefined && typeof encoding !== 'string') {
+      throw new TypeError('encoding must be a string');
+    }
+    if (typeof encoding === 'string' && !Buffer.isEncoding(encoding)) {
+      throw new TypeError('Unknown encoding: ' + encoding);
+    }
+  } else if (typeof val === 'number') {
+    val = val & 255;
+  }
+
+  // Invalid ranges are not set to a default, so can range check early.
+  if (start < 0 || this.length < start || this.length < end) {
+    throw new RangeError('Out of range index');
+  }
+
+  if (end <= start) {
+    return this;
+  }
+
+  start = start >>> 0;
+  end = end === undefined ? this.length : end >>> 0;
+
+  if (!val) val = 0;
+
+  var i;
+  if (typeof val === 'number') {
+    for (i = start; i < end; ++i) {
+      this[i] = val;
+    }
+  } else {
+    var bytes = Buffer.isBuffer(val) ? val : utf8ToBytes(new Buffer(val, encoding).toString());
+    var len = bytes.length;
+    for (i = 0; i < end - start; ++i) {
+      this[i + start] = bytes[i % len];
+    }
+  }
+
+  return this;
+};
+
+// HELPER FUNCTIONS
+// ================
+
+var INVALID_BASE64_RE = /[^+\/0-9A-Za-z-_]/g;
+
+function base64clean(str) {
+  // Node strips out invalid characters like \n and \t from the string, base64-js does not
+  str = stringtrim(str).replace(INVALID_BASE64_RE, '');
+  // Node converts strings with length < 2 to ''
+  if (str.length < 2) return '';
+  // Node allows for non-padded base64 strings (missing trailing ===), base64-js does not
+  while (str.length % 4 !== 0) {
+    str = str + '=';
+  }
+  return str;
+}
+
+function stringtrim(str) {
+  if (str.trim) return str.trim();
+  return str.replace(/^\s+|\s+$/g, '');
+}
+
+function toHex(n) {
+  if (n < 16) return '0' + n.toString(16);
+  return n.toString(16);
+}
+
+function utf8ToBytes(string, units) {
+  units = units || Infinity;
+  var codePoint;
+  var length = string.length;
+  var leadSurrogate = null;
+  var bytes = [];
+
+  for (var i = 0; i < length; ++i) {
+    codePoint = string.charCodeAt(i);
+
+    // is surrogate component
+    if (codePoint > 0xD7FF && codePoint < 0xE000) {
+      // last char was a lead
+      if (!leadSurrogate) {
+        // no lead yet
+        if (codePoint > 0xDBFF) {
+          // unexpected trail
+          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD);
+          continue;
+        } else if (i + 1 === length) {
+          // unpaired lead
+          if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD);
+          continue;
+        }
+
+        // valid lead
+        leadSurrogate = codePoint;
+
+        continue;
+      }
+
+      // 2 leads in a row
+      if (codePoint < 0xDC00) {
+        if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD);
+        leadSurrogate = codePoint;
+        continue;
+      }
+
+      // valid surrogate pair
+      codePoint = (leadSurrogate - 0xD800 << 10 | codePoint - 0xDC00) + 0x10000;
+    } else if (leadSurrogate) {
+      // valid bmp char, but last char was a lead
+      if ((units -= 3) > -1) bytes.push(0xEF, 0xBF, 0xBD);
+    }
+
+    leadSurrogate = null;
+
+    // encode utf8
+    if (codePoint < 0x80) {
+      if ((units -= 1) < 0) break;
+      bytes.push(codePoint);
+    } else if (codePoint < 0x800) {
+      if ((units -= 2) < 0) break;
+      bytes.push(codePoint >> 0x6 | 0xC0, codePoint & 0x3F | 0x80);
+    } else if (codePoint < 0x10000) {
+      if ((units -= 3) < 0) break;
+      bytes.push(codePoint >> 0xC | 0xE0, codePoint >> 0x6 & 0x3F | 0x80, codePoint & 0x3F | 0x80);
+    } else if (codePoint < 0x110000) {
+      if ((units -= 4) < 0) break;
+      bytes.push(codePoint >> 0x12 | 0xF0, codePoint >> 0xC & 0x3F | 0x80, codePoint >> 0x6 & 0x3F | 0x80, codePoint & 0x3F | 0x80);
+    } else {
+      throw new Error('Invalid code point');
+    }
+  }
+
+  return bytes;
+}
+
+function asciiToBytes(str) {
+  var byteArray = [];
+  for (var i = 0; i < str.length; ++i) {
+    // Node's code seems to be doing this and not & 0x7F..
+    byteArray.push(str.charCodeAt(i) & 0xFF);
+  }
+  return byteArray;
+}
+
+function utf16leToBytes(str, units) {
+  var c, hi, lo;
+  var byteArray = [];
+  for (var i = 0; i < str.length; ++i) {
+    if ((units -= 2) < 0) break;
+
+    c = str.charCodeAt(i);
+    hi = c >> 8;
+    lo = c % 256;
+    byteArray.push(lo);
+    byteArray.push(hi);
+  }
+
+  return byteArray;
+}
+
+function base64ToBytes(str) {
+  return base64.toByteArray(base64clean(str));
+}
+
+function blitBuffer(src, dst, offset, length) {
+  for (var i = 0; i < length; ++i) {
+    if (i + offset >= dst.length || i >= src.length) break;
+    dst[i + offset] = src[i];
+  }
+  return i;
+}
+
+function isnan(val) {
+  return val !== val; // eslint-disable-line no-self-compare
+}
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(193)))
+
+/***/ }),
+
+/***/ 90:
+/***/ (function(module, exports, __webpack_require__) {
+
+/* WEBPACK VAR INJECTION */(function(Buffer) {/*
+	MIT License http://www.opensource.org/licenses/mit-license.php
+	Author Tobias Koppers @sokra
+*/
+// css base code, injected by the css-loader
+module.exports = function (useSourceMap) {
+	var list = [];
+
+	// return the list of modules as css string
+	list.toString = function toString() {
+		return this.map(function (item) {
+			var content = cssWithMappingToString(item, useSourceMap);
+			if (item[2]) {
+				return "@media " + item[2] + "{" + content + "}";
+			} else {
+				return content;
+			}
+		}).join("");
+	};
+
+	// import a list of modules into the list
+	list.i = function (modules, mediaQuery) {
+		if (typeof modules === "string") modules = [[null, modules, ""]];
+		var alreadyImportedModules = {};
+		for (var i = 0; i < this.length; i++) {
+			var id = this[i][0];
+			if (typeof id === "number") alreadyImportedModules[id] = true;
+		}
+		for (i = 0; i < modules.length; i++) {
+			var item = modules[i];
+			// skip already imported module
+			// this implementation is not 100% perfect for weird media query combinations
+			//  when a module is imported multiple times with different media queries.
+			//  I hope this will never occur (Hey this way we have smaller bundles)
+			if (typeof item[0] !== "number" || !alreadyImportedModules[item[0]]) {
+				if (mediaQuery && !item[2]) {
+					item[2] = mediaQuery;
+				} else if (mediaQuery) {
+					item[2] = "(" + item[2] + ") and (" + mediaQuery + ")";
+				}
+				list.push(item);
+			}
+		}
+	};
+	return list;
+};
+
+function cssWithMappingToString(item, useSourceMap) {
+	var content = item[1] || '';
+	var cssMapping = item[3];
+	if (!cssMapping) {
+		return content;
+	}
+
+	if (useSourceMap) {
+		var sourceMapping = toComment(cssMapping);
+		var sourceURLs = cssMapping.sources.map(function (source) {
+			return '/*# sourceURL=' + cssMapping.sourceRoot + source + ' */';
+		});
+
+		return [content].concat(sourceURLs).concat([sourceMapping]).join('\n');
+	}
+
+	return [content].join('\n');
+}
+
+// Adapted from convert-source-map (MIT)
+function toComment(sourceMap) {
+	var base64 = new Buffer(JSON.stringify(sourceMap)).toString('base64');
+	var data = 'sourceMappingURL=data:application/json;charset=utf-8;base64,' + base64;
+
+	return '/*# ' + data + ' */';
+}
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(89).Buffer))
 
 /***/ })
-/******/ ]);
+
+/******/ });

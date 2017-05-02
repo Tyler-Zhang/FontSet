@@ -1,39 +1,56 @@
 import FontChanger from './lib/FontChanger';
-import {keyBindings} from './lib/defaults';
+import { INITIALIZE_CLIENT, KEY_BINDINGS, AVAILABLE_FONTS, SETTINGS } from './lib/definitions';
+import { styleList } from './lib/defaults';
+import { selectHighlight } from './lib/actions';
+import './scss/content.scss';
 
-console.log(FontChanger);
 
 chrome.runtime.onMessage.addListener(
   function (request, sender, sendResponse) {
-    console.log(request);
-    sendResponse("success");
-  });
-
-initiate(keyBindings); // for debugging;
-
-function initiate(keyBindings) {
-  let fontChanger = new FontChanger($('.name'), {
-    available_fonts: ['helvetica', 'Bree', 'lucida'],
-    styleList: ['normal', 'italic', 'oblique'],
-    settings: {
-      sizeStep: 3,
-      sizeBigMult: 10,
-      weightStep: 3,
-      weightBigMult: 10,
-      fontStep: 1,
-      fontBigMult: 1
+    if (request.type == INITIALIZE_CLIENT) {
+      initiate({
+        availableFonts: request[AVAILABLE_FONTS],
+        keyBindings: request[KEY_BINDINGS],
+        settings: request[SETTINGS]
+      });
     }
   });
 
-  $(window).keypress(handleKeyPress.bind({
+
+function initiate({ availableFonts, keyBindings, settings }) {
+  let fontChanger = new FontChanger($(".name"), {
+    availableFonts,
+    styleList,
+    settings
+  });
+
+  let handleContext = {
     fontChanger,
-    keyBindings
-  }));
+    keyBindings,
+    highlightedElement: null
+  };
+
+  document.addEventListener('mousemove', handleMouseMove.bind(handleContext));
+  $(window).keypress(handleKeyPress.bind(handleContext));
 }
 
 function handleKeyPress({ altKey, ctrlKey, metaKey, key }) {
   let action = this.keyBindings[key];
+  console.log(action);
+  if (action == selectHighlight){
+    
+    this.fontChanger.changeElements($(this.highlightedElement));
+  } else 
+    this.fontChanger.action(action);
+}
 
-  this.fontChanger.action(action);
+function handleMouseMove({ srcElement }) {
+  if(srcElement == this.highlightedElement) return;
 
+  if (this.highlightedElement) {
+    $(this.highlightedElement).removeClass('fontset-highlighted');
+  }
+
+  $(srcElement).addClass('fontset-highlighted');
+  this.highlightedElement = srcElement;
 }

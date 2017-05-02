@@ -15,11 +15,20 @@ export let keyBindings = {
   A: actions.prevFontBig,
   q: actions.changeFontStyle,
   t: actions.search,
-  u: actions.undo
+  u: actions.undo,
+  z: actions.selectHighlight
 }
 
-export let activated = true;
 
-export let available_fonts = ['helvetica'];
+export let availableFonts = ['Palatino', 'Garamond', 'Bookman', 'Avant Garde', 
+  'Verdana', 'Georgia', 'Comic Sans MS', 'Trebuchet MS', 'Arial Black', 'Impact'];
 export let styleList = ['normal', 'italic', 'oblique'];
+export let settings = {
+  sizeStep: 3,
+  sizeBigMult: 10,
+  weightStep: 3,
+  weightBigMult: 10,
+  fontStep: 1,
+  fontBigMult: 1
+}
 

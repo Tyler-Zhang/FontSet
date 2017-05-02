@@ -9,11 +9,12 @@ const plugins = [
 ];
 
 
-module.exports = { 
+module.exports = {
   context: __dirname,
   entry: {
     'bin/public/background': './src/background.js',
     'bin/public/content': './src/content.js',
+    'bin/public/popup': './src/popup.jsx',
     'bin/tests': './src/tests.js'
   },
   output: {
@@ -24,7 +25,12 @@ module.exports = {
     rules: [
       {
         test: /\.jsx?$/,
+        exclude: '/node_modules/',
         use: 'babel-loader'
+      },
+      {
+        test: /\.scss$/,
+        use: ['style-loader', 'css-loader', 'sass-loader']
       }
     ]
   },

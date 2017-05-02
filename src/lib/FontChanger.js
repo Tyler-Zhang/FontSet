@@ -3,8 +3,8 @@ import * as actions from './actions';
 
 export default class FontChanger {
 
-  constructor(elements, { available_fonts, styleList, settings }) {
-    this.fontList = available_fonts;
+  constructor(elements, { availableFonts, styleList, settings }) {
+    this.fontList = availableFonts;
     this.styleList = styleList;
     this.settings = settings;
 
@@ -57,15 +57,17 @@ export default class FontChanger {
       newFontSize = x;
     } else {
       let currentFontsize = this.elements.css('font-size');
-      let reg = /\d+.?(?:\d+)?/;  // regex for extracting the px size value;
+      console.log(currentFontsize);
+      let reg = /(.+)px/;  // regex for extracting the px size value;
       let matched = reg.exec(currentFontsize);
 
       if (!matched) {
         console.error('No size associated with fontsize: ' + currentFontsize);
         return false;
       }
-      newFontSize = Number(matched) + x + 'px';
+      newFontSize = Number(matched[1]) + x + 'px';
     }
+    console.log(newFontSize);
     this.elements.css('font-size', newFontSize);
     return true;
   }
