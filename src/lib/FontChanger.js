@@ -12,9 +12,13 @@ export default class FontChanger {
   }
 
   changeElements(elements){
+    if(this.elements)
+      this.elements.removeClass('fontset-selected');
+
     this.fontIdx = 0;
     this.stateStack = [];
     this.elements = elements;
+    this.elements.addClass('fontset-selected');
     this.addStateToStack();
     
   }

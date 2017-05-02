@@ -371,7 +371,7 @@ function initiate(_ref) {
       keyBindings = _ref.keyBindings,
       settings = _ref.settings;
 
-  var fontChanger = new __WEBPACK_IMPORTED_MODULE_0__lib_FontChanger__["a" /* default */]($(".name"), {
+  var fontChanger = new __WEBPACK_IMPORTED_MODULE_0__lib_FontChanger__["a" /* default */]($(), {
     availableFonts: availableFonts,
     styleList: __WEBPACK_IMPORTED_MODULE_2__lib_defaults__["a" /* styleList */],
     settings: settings
@@ -501,7 +501,7 @@ exports = module.exports = __webpack_require__(90)(undefined);
 
 
 // module
-exports.push([module.i, ".fontset-highlighted {\n  border: 1px solid blue; }\n", ""]);
+exports.push([module.i, ".fontset-highlighted {\n  outline: 1px solid blue; }\n\n.fontset-selected {\n  outline: 1px solid green; }\n", ""]);
 
 // exports
 
@@ -10772,9 +10772,12 @@ var FontChanger = function () {
   _createClass(FontChanger, [{
     key: 'changeElements',
     value: function changeElements(elements) {
+      if (this.elements) this.elements.removeClass('fontset-selected');
+
       this.fontIdx = 0;
       this.stateStack = [];
       this.elements = elements;
+      this.elements.addClass('fontset-selected');
       this.addStateToStack();
     }
     /**

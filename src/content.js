@@ -18,7 +18,7 @@ chrome.runtime.onMessage.addListener(
 
 
 function initiate({ availableFonts, keyBindings, settings }) {
-  let fontChanger = new FontChanger($(".name"), {
+  let fontChanger = new FontChanger($(), {
     availableFonts,
     styleList,
     settings
