@@ -1,4 +1,5 @@
 import * as actions from './actions';
+import { TOP_RIGHT } from './definitions';
 
 export let keyBindings = {
   w: actions.incSize,
@@ -20,8 +21,9 @@ export let keyBindings = {
 }
 
 
-export let availableFonts = ['Palatino', 'Garamond', 'Bookman', 'Avant Garde', 
-  'Verdana', 'Georgia', 'Comic Sans MS', 'Trebuchet MS', 'Arial Black', 'Impact'];
+export let availableFonts = ['Lucida Sans', 'bree', 'woodford', 'Fenix', 'Oranienbaum', 'Audrey'];
+
+
 export let styleList = ['normal', 'italic', 'oblique'];
 export let settings = {
   sizeStep: 3,
@@ -29,6 +31,7 @@ export let settings = {
   weightStep: 100,
   weightBigMult: 2,
   fontStep: 1,
-  fontBigMult: 1
+  fontBigMult: 1,
+  corner: TOP_RIGHT
 }
 

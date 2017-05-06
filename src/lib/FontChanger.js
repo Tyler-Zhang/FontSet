@@ -1,5 +1,6 @@
 import Detector from './FontDetector';
 import * as actions from './actions';
+import { WEIGHT_MAP } from './definitions';
 
 export default class FontChanger {
 
@@ -11,8 +12,8 @@ export default class FontChanger {
     this.changeElements(elements);
   }
 
-  changeElements(elements){
-    if(this.elements)
+  changeElements(elements) {
+    if (this.elements)
       this.elements.removeClass('fontset-selected');
 
     this.fontIdx = 0;
@@ -38,7 +39,7 @@ export default class FontChanger {
     } else {
       console.log(`x: ${x}, fontIdx: ${this.fontIdx}, len: ${this.fontList.length}`)
       newFontIdx = (x + this.fontIdx) % this.fontList.length;
-      if(newFontIdx < 0) newFontIdx = this.fontList.length + newFontIdx;
+      if (newFontIdx < 0) newFontIdx = this.fontList.length + newFontIdx;
       newFont = this.fontList[newFontIdx];
     }
 
@@ -86,7 +87,10 @@ export default class FontChanger {
       newFontWeight = x;
     } else {
       let currentFontWeight = this.elements.css('font-weight');
-      let val = Number(currentFontWeight);
+      let val;
+      if(isNaN(currentFontWeight)){
+        val = WEIGHT_MAP[currentFontWeight] + x;
+      } else  val = Number(currentFontWeight);
       newFontWeight = val + x;
     }
 

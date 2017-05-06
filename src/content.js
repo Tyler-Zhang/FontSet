@@ -25,7 +25,7 @@ function initiate({ availableFonts, keyBindings, settings }) {
     settings
   });
 
-  let fontDisplay = new FontDisplay({corner: "tr"});
+  let fontDisplay = new FontDisplay({ corner: settings.corner});
 
   let handleContext = {
     fontChanger,
@@ -36,12 +36,12 @@ function initiate({ availableFonts, keyBindings, settings }) {
 
   document.addEventListener('mousemove', handleMouseMove.bind(handleContext));
   $(window).keypress(handleKeyPress.bind(handleContext));
-  
+
 }
 
 function handleKeyPress({ altKey, ctrlKey, metaKey, key }) {
   let action = this.keyBindings[key];
-  if (action == selectHighlight){
+  if (action == selectHighlight) {
     this.fontChanger.changeElements($(this.highlightedElement));
     let state = this.fontChanger.getState();
     this.fontDisplay.setData(state);
@@ -53,7 +53,7 @@ function handleKeyPress({ altKey, ctrlKey, metaKey, key }) {
 }
 
 function handleMouseMove({ srcElement }) {
-  if(srcElement == this.highlightedElement) return;
+  if (srcElement == this.highlightedElement) return;
 
   if (this.highlightedElement) {
     $(this.highlightedElement).removeClass('fontset-highlighted');
@@ -63,6 +63,6 @@ function handleMouseMove({ srcElement }) {
   this.highlightedElement = srcElement;
 }
 
-function handleSettingsChange(){
+function handleSettingsChange() {
 
 }

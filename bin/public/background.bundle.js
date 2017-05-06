@@ -63,25 +63,26 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 195);
+/******/ 	return __webpack_require__(__webpack_require__.s = 191);
 /******/ })
 /************************************************************************/
 /******/ ({
 
-/***/ 14:
+/***/ 10:
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return KEY_BINDINGS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return AVAILABLE_FONTS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return SETTINGS; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return INITIALIZED; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "j", function() { return INITIALIZED; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return INITIALIZE_CLIENT; });
 /* unused harmony export CHANGE_CLIENT_SETTINGS */
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "e", function() { return TOP_LEFT; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "f", function() { return TOP_RIGHT; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "g", function() { return BOTTOM_LEFT; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "h", function() { return BOTTOM_RIGHT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "i", function() { return WEIGHT_MAP; });
 var KEY_BINDINGS = 'KEY_BINDINGS';
 var AVAILABLE_FONTS = 'AVAILABLE_FONTS';
 var SETTINGS = 'SETTINGS';
@@ -95,15 +96,20 @@ var TOP_RIGHT = 'tr';
 var BOTTOM_LEFT = 'bl';
 var BOTTOM_RIGHT = 'br';
 
+var WEIGHT_MAP = {
+  normal: 400,
+  bold: 500
+};
+
 /***/ }),
 
-/***/ 195:
+/***/ 191:
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__lib_defaults__ = __webpack_require__(27);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__lib_definitions__ = __webpack_require__(14);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__lib_definitions__ = __webpack_require__(10);
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 
@@ -127,7 +133,7 @@ function startClient() {
 }
 
 chrome.storage.sync.get([__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["c" /* KEY_BINDINGS */], __WEBPACK_IMPORTED_MODULE_1__lib_definitions__["b" /* AVAILABLE_FONTS */], __WEBPACK_IMPORTED_MODULE_1__lib_definitions__["d" /* SETTINGS */]], function (items) {
-  if (!items[__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["i" /* INITIALIZED */]]) {
+  if (!items[__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["j" /* INITIALIZED */]]) {
     var _chrome$storage$sync$;
 
     // Load defaults into the settings
@@ -135,7 +141,7 @@ chrome.storage.sync.get([__WEBPACK_IMPORTED_MODULE_1__lib_definitions__["c" /* K
       if (chrome.runtime.lastError) {
         console.error(chrome.runtime.lastError);
       } else {
-        chrome.storage.sync.set(_defineProperty({}, __WEBPACK_IMPORTED_MODULE_1__lib_definitions__["i" /* INITIALIZED */], true));
+        chrome.storage.sync.set(_defineProperty({}, __WEBPACK_IMPORTED_MODULE_1__lib_definitions__["j" /* INITIALIZED */], true));
         updateState();
       }
     });
@@ -196,10 +202,12 @@ var selectHighlight = 'selectHighlight';
 
 "use strict";
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__actions__ = __webpack_require__(21);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__definitions__ = __webpack_require__(10);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "b", function() { return keyBindings; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "c", function() { return availableFonts; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "a", function() { return styleList; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "d", function() { return settings; });
+
 
 
 var keyBindings = {
@@ -221,7 +229,8 @@ var keyBindings = {
   z: __WEBPACK_IMPORTED_MODULE_0__actions__["a" /* selectHighlight */]
 };
 
-var availableFonts = ['Palatino', 'Garamond', 'Bookman', 'Avant Garde', 'Verdana', 'Georgia', 'Comic Sans MS', 'Trebuchet MS', 'Arial Black', 'Impact'];
+var availableFonts = ['Lucida Sans', 'bree', 'woodford', 'Fenix', 'Oranienbaum', 'Audrey'];
+
 var styleList = ['normal', 'italic', 'oblique'];
 var settings = {
   sizeStep: 3,
@@ -229,7 +238,8 @@ var settings = {
   weightStep: 100,
   weightBigMult: 2,
   fontStep: 1,
-  fontBigMult: 1
+  fontBigMult: 1,
+  corner: __WEBPACK_IMPORTED_MODULE_1__definitions__["f" /* TOP_RIGHT */]
 };
 
 /***/ })

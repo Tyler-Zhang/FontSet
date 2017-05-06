@@ -10,3 +10,8 @@ export const TOP_LEFT = 'tl';
 export const TOP_RIGHT = 'tr';
 export const BOTTOM_LEFT = 'bl';
 export const BOTTOM_RIGHT = 'br';
+
+export const WEIGHT_MAP = {
+  normal: 400,
+  bold: 500
+}
